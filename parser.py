@@ -138,6 +138,11 @@ def parse(source):
         else:
             buf.append(c)
 
+    # check to see if we matched all closing parenthesis (first item is always
+    # tokens list, and it never gets popped).
+    if len(stack) > 1:
+        raise ParserError("Too few closing parenthesis.")
+
     # TODO: turn tokens into language constructs (Integer, Float, etc.)
 
     return tokens

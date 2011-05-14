@@ -50,26 +50,36 @@ class Tokens:
     CLOSE_PAREN = ")"
     QUOTE = "'"
     WHITESPACE = "\s"
+    ESCAPE_CHAR = "\\"
+    STRING = "\"|'"
 
     @classmethod
     def init():
         raise NotImplementedError("Can't instantiate the 'Tokens' class!")
 
     @staticmethod
-    def is_open_paren(s):
-        return s == Tokens.OPEN_PAREN
+    def is_open_paren(c):
+        return c == Tokens.OPEN_PAREN
 
     @staticmethod
-    def is_close_paren(s):
-        return s == Tokens.CLOSE_PAREN
+    def is_close_paren(c):
+        return c == Tokens.CLOSE_PAREN
 
     @staticmethod
-    def is_quote(s):
-        return s == Tokens.QUOTE
+    def is_quote(c):
+        return c == Tokens.QUOTE
 
     @staticmethod
-    def is_whitespace(s):
-        return True if re.match(Tokens.WHITESPACE, s) else False
+    def is_whitespace(c):
+        return True if re.match(Tokens.WHITESPACE, c) else False
+
+    @staticmethod
+    def is_escape_char(c):
+        return c == Token.ESCAPE_CHAR
+
+    @staticmethod
+    def is_string(c):
+        return True if re.match(Tokens.STRING, c) else False
 
 def parse(source):
     """

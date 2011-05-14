@@ -149,6 +149,23 @@ def parse(source):
 
 if __name__ == "__main__":
     while 1:
-        i = raw_input("> ")
-        print parse(i)
+        source = raw_input("> ")
 
+        blank_count = 0
+        while (source.count(Tokens.OPEN_PAREN) !=
+                source.count(Tokens.CLOSE_PAREN)):
+            i = raw_input(": ")
+
+            # count number of times we entered nothing, reset when we get input
+            if i == "":
+                blank_count += 1
+            else:
+                blank_count = 0
+
+            # quit looping if blanks were entered too much
+            if blank_count > 1:
+                break
+
+            source += " " + i
+
+        print parse(source)

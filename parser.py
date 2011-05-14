@@ -163,6 +163,9 @@ def parse(source):
     return tokens
 
 if __name__ == "__main__":
+    import sys
+    import traceback
+
     source = ""
 
     standard_prompt = "> "
@@ -179,7 +182,19 @@ if __name__ == "__main__":
             prompt = standard_prompt
             source = ""
         except CloseParenError:
-            # if we fail because of this error, get more input
+            # if we fail because of this error, get more input with a new prompt
             prompt = continue_prompt
+        except KeyboardInterrupt:
+            # reset prompt on Ctrl+C
+            prompt = standard_prompt
+            source = ""
+            print
+        except EOFError:
+            # exit on Ctrl+D
+            print
+            sys.exit()
+        except Exception, e:
+            # print all other problems
+            traceback.print_exc()
 
 

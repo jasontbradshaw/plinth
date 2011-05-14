@@ -77,7 +77,7 @@ def parse(source):
     # buffer where uncommitted characters live
     buf = []
 
-    # stack that keeps track of scopes (where first scope is always tokens list)
+    # stack that keeps track of scopes, where first scope is always tokens list
     stack = [tokens]
 
     def flush_raw(stack, buf):

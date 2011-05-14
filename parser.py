@@ -65,13 +65,6 @@ class Tokens:
     def is_whitespace(s):
         return True if re.match(Tokens.WHITESPACE, s) else False
 
-def tokenize(source):
-    """
-    Turns the given source into a list of token strings.
-    """
-
-    pass
-
 def parse(source):
     """
     Given a string source, reads it character by character and generates a parse

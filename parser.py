@@ -236,7 +236,8 @@ if __name__ == "__main__":
             print
             sys.exit()
         except Exception, e:
-            # print all other problems
+            # print all other problems and clear source
             traceback.print_exc()
+            source = ""
 
 

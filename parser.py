@@ -96,7 +96,7 @@ def parse(source):
     # stack that keeps track of scopes, where first scope is always tokens list
     stack = [tokens]
 
-    def flush_raw(stack, buf):
+    def flush_fun(stack, buf):
         """Copy buffer contents into latest scope and empty the buffer."""
 
         if len(stack) < 1:
@@ -111,30 +111,30 @@ def parse(source):
             # and not the local copy.
             del buf[:]
 
-    def indent_raw(stack, buf):
+    def indent_fun(stack, buf):
         """Add another level to tokens when an indentation marker is found."""
 
-        flush_raw(stack, buf)
+        flush_fun(stack, buf)
 
         # add a new level to last indent scope and push same list onto stack
         new_scope = []
         stack[-1].append(new_scope)
         stack.append(new_scope)
 
-    def dedent_raw(stack, buf):
+    def dedent_fun(stack, buf):
         """Reduce indentation level."""
 
         # flush the buffer and remove current level from the stack
-        flush_raw(stack, buf)
+        flush_fun(stack, buf)
         stack.pop()
 
         if len(stack) < 1:
             raise OpenParenError("Too few opening parenthesis.")
 
     # work around python's read-only closures
-    flush = lambda: flush_raw(stack, buf)
-    indent = lambda: indent_raw(stack, buf)
-    dedent = lambda: dedent_raw(stack, buf)
+    flush = lambda: flush_fun(stack, buf)
+    indent = lambda: indent_fun(stack, buf)
+    dedent = lambda: dedent_fun(stack, buf)
 
     # iterate over every character in the source string
     for c in source:

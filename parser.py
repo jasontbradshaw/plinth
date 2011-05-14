@@ -12,33 +12,42 @@ class CloseParenError(ParserError):
     """Raised when there are too few closing parenthesis."""
 
 class Symbol:
-    def __init__(self, symbol_string):
+    @classmethod
+    def __init__(symbol_string):
         self.value = symbol_string
 
-    def __str__(self):
+    @classmethod
+    def __str__():
         return self.value
 
-    def __repr__(self):
+    @classmethod
+    def __repr__():
         return "(SYMBOL " + str(self) + ")"
 
 class Integer:
-    def __init__(self, integer_string):
+    @classmethod
+    def __init__(integer_string):
         self.value = int(integer_string)
 
-    def __str__(self):
+    @classmethod
+    def __str__():
         return str(self.value)
 
-    def __repr__(self):
+    @classmethod
+    def __repr__():
         return "(INTEGER " + str(self) + ")"
 
 class Float:
-    def __init__(self, float_string):
+    @classmethod
+    def __init__(float_string):
         self.value = float(float_string)
 
-    def __str__(self):
+    @classmethod
+    def __str__():
         return str(self.value)
 
-    def __repr__(self):
+    @classmethod
+    def __repr__():
         return "(FLOAT " + str(self) + ")"
 
 class Tokens:

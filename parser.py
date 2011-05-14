@@ -150,6 +150,9 @@ def parse(source):
         else:
             buf.append(c)
 
+    # do a final buffer flush to catch any remaining contents
+    flush()
+
     # check to see if we matched all closing parenthesis (first item is always
     # tokens list, and it never gets popped).
     if len(stack) > 1:

@@ -51,7 +51,7 @@ class Tokens:
     QUOTE = "'"
     WHITESPACE = "\s"
     ESCAPE_CHAR = "\\"
-    STRING = "\"|'"
+    STRING = '"'
 
     @classmethod
     def init():
@@ -75,11 +75,11 @@ class Tokens:
 
     @staticmethod
     def is_escape_char(c):
-        return c == Token.ESCAPE_CHAR
+        return c == Tokens.ESCAPE_CHAR
 
     @staticmethod
     def is_string(c):
-        return True if re.match(Tokens.STRING, c) else False
+        return c == Tokens.STRING
 
 def parse(source):
     """
@@ -138,10 +138,31 @@ def parse(source):
     dedent = lambda: dedent_fun(stack, buf)
 
     # iterate over every character in the source string
+    in_string = False
+    is_escaped = False
     for c in source:
 
+        # deal with strings first to avoid triggering other language constructs
+        if in_string:
+            # every character inside a string gets inserted literally
+            buf.append(c)
+
+            # treat escaped characters as literal
+            if is_escaped:
+                # reset the escape marker after we've appended the escaped char
+                is_escaped = False
+
+            # only allow for escape character inside strings
+            elif Tokens.is_escape_char(c):
+                is_escaped = True
+
+            # end the string and flush if we found an unescaped string token
+            elif Tokens.is_string(c):
+                flush()
+                in_string = False
+
         # skip whitespace, flushing the buffer if necessary
-        if Tokens.is_whitespace(c):
+        elif Tokens.is_whitespace(c):
             flush()
 
         # open parenthesis
@@ -157,12 +178,22 @@ def parse(source):
             buf.append(c)
             flush()
 
+        # mark strings
+        elif Tokens.is_string(c):
+            # mark us as being in a string, let the first case deal with rest
+            buf.append(c)
+            in_string = True
+
         # just a normal character
         else:
             buf.append(c)
 
     # do a final buffer flush to catch any remaining contents
     flush()
+
+    # ensure all strings were correctly closed
+    if in_string:
+        raise ParserError("Unclosed string.")
 
     # check to see if we matched all closing parenthesis (first item is always
     # tokens list, and it never gets popped).

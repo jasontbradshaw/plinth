@@ -133,6 +133,8 @@ def parse(source):
         else:
             buf.append(c)
 
+    # TODO: turn tokens into language constructs (Integer, Float, etc.)
+
     return tokens
 
 if __name__ == "__main__":

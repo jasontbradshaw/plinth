@@ -129,6 +129,11 @@ def parse(source):
         elif Tokens.is_close_paren(c):
             dedent()
 
+        # quotes are special tokens
+        elif Tokens.is_quote(c):
+            buf.append(c)
+            flush()
+
         # just a normal character
         else:
             buf.append(c)

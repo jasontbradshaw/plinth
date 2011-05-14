@@ -114,6 +114,7 @@ def parse(source):
     def indent_fun(stack, buf):
         """Add another level to tokens when an indentation marker is found."""
 
+        # flush first so we clear the buffer
         flush_fun(stack, buf)
 
         # add a new level to last indent scope and push same list onto stack

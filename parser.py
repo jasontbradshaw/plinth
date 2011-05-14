@@ -227,7 +227,13 @@ if __name__ == "__main__":
         try:
             # get input from user and try to parse and print it
             source += " " + raw_input(prompt)
-            print parse(source)
+            if source != " ":
+                print parse(source)
+
+            # give a new line if user entered nothing
+            else:
+                source = ""
+                continue
 
             # reset after successful print
             prompt = standard_prompt
@@ -248,5 +254,6 @@ if __name__ == "__main__":
             # print all other problems and clear source
             traceback.print_exc()
             source = ""
+            prompt = standard_prompt
 
 

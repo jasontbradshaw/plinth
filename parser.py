@@ -5,6 +5,12 @@ import re
 class ParserError(Exception):
     """Raised when parsing input fails."""
 
+class OpenParenError(ParserError):
+    """Raised when there are too few opening parenthesis."""
+
+class CloseParenError(ParserError):
+    """Raised when there are too few closing parenthesis."""
+
 class Symbol:
     def __init__(self, symbol_string):
         self.value = symbol_string
@@ -83,6 +89,9 @@ def parse(source):
     def flush_raw(stack, buf):
         """Copy buffer contents into latest scope and empty the buffer."""
 
+        if len(stack) < 1:
+            raise OpenParenError("Too few opening parenthesis.")
+
         # don't flush if buffer is empty
         if len(buf) > 0:
             # append to current indentation level and clear buffer
@@ -108,6 +117,9 @@ def parse(source):
         # flush the buffer and remove current level from the stack
         flush_raw(stack, buf)
         stack.pop()
+
+        if len(stack) < 1:
+            raise OpenParenError("Too few opening parenthesis.")
 
     # work around python's read-only closures
     flush = lambda: flush_raw(stack, buf)
@@ -141,31 +153,30 @@ def parse(source):
     # check to see if we matched all closing parenthesis (first item is always
     # tokens list, and it never gets popped).
     if len(stack) > 1:
-        raise ParserError("Too few closing parenthesis.")
+        raise CloseParenError("Too few closing parenthesis.")
 
     # TODO: turn tokens into language constructs (Integer, Float, etc.)
 
     return tokens
 
 if __name__ == "__main__":
+    source = ""
+
+    standard_prompt = "> "
+    continue_prompt = ": "
+    prompt = standard_prompt
+
     while 1:
-        source = raw_input("> ")
+        try:
+            # get input from user and try to parse and print it
+            source += " " + raw_input(prompt)
+            print parse(source)
 
-        blank_count = 0
-        while (source.count(Tokens.OPEN_PAREN) !=
-                source.count(Tokens.CLOSE_PAREN)):
-            i = raw_input(": ")
+            # reset after successful print
+            prompt = standard_prompt
+            source = ""
+        except CloseParenError:
+            # if we fail because of this error, get more input
+            prompt = continue_prompt
 
-            # count number of times we entered nothing, reset when we get input
-            if i == "":
-                blank_count += 1
-            else:
-                blank_count = 0
 
-            # quit looping if blanks were entered too much
-            if blank_count > 1:
-                break
-
-            source += " " + i
-
-        print parse(source)

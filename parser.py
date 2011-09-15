@@ -80,7 +80,7 @@ class Tokens:
 
     @staticmethod
     def is_whitespace(c):
-        return True if re.match(Tokens.WHITESPACE, c) else False
+        return bool(re.match(Tokens.WHITESPACE, c))
 
     @staticmethod
     def is_escape_char(c):

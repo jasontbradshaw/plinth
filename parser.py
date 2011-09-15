@@ -184,7 +184,8 @@ def parse(source):
 
         # quotes are special tokens
         elif Tokens.is_quote(c):
-            buf.append(c)
+            flush()
+            buf.append()
             flush()
 
         # mark strings

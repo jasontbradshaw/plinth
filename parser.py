@@ -11,45 +11,6 @@ class OpenParenError(ParserError):
 class CloseParenError(ParserError):
     """Raised when there are too few closing parenthesis."""
 
-class Symbol:
-    @classmethod
-    def __init__(symbol_string):
-        self.value = symbol_string
-
-    @classmethod
-    def __str__():
-        return self.value
-
-    @classmethod
-    def __repr__():
-        return "(SYMBOL " + str(self) + ")"
-
-class Integer:
-    @classmethod
-    def __init__(integer_string):
-        self.value = int(integer_string)
-
-    @classmethod
-    def __str__():
-        return str(self.value)
-
-    @classmethod
-    def __repr__():
-        return "(INTEGER " + str(self) + ")"
-
-class Float:
-    @classmethod
-    def __init__(float_string):
-        self.value = float(float_string)
-
-    @classmethod
-    def __str__():
-        return str(self.value)
-
-    @classmethod
-    def __repr__():
-        return "(FLOAT " + str(self) + ")"
-
 class Tokens:
     """
     A container class for language tokens.
@@ -210,8 +171,6 @@ def parse(source):
     if len(stack) > 1:
         raise CloseParenError("Too few closing parenthesis.")
 
-    # TODO: turn tokens into language constructs (Integer, Float, etc.)
-
     return tokens
 
 if __name__ == "__main__":
@@ -256,5 +215,3 @@ if __name__ == "__main__":
             traceback.print_exc()
             source = ""
             prompt = standard_prompt
-
-

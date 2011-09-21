@@ -1,0 +1,4 @@
+TODO:
+ - make the lexer a generator function, so tokens are parsed and consumed on
+   demand rather than all at once (saves evaluation time for invalid
+   expressions)

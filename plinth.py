@@ -308,25 +308,11 @@ if __name__ == "__main__":
     while 1:
         try:
             # get input from user and try to parse and print it
-            source += " " + raw_input(prompt)
-            if source != " ":
-                print lex(source)
-
-            # give a new line if user entered nothing
-            else:
-                source = ""
-                continue
-
-            # reset after successful print
-            prompt = standard_prompt
-            source = ""
-        except CloseParenError:
-            # if we fail because of this error, get more input with a new prompt
-            prompt = continue_prompt
+            source = raw_input(prompt)
+            print lex(source)
         except KeyboardInterrupt:
             # reset prompt on Ctrl+C
             prompt = standard_prompt
-            source = ""
             print
         except EOFError:
             # exit on Ctrl+D
@@ -335,5 +321,3 @@ if __name__ == "__main__":
         except Exception, e:
             # print all other problems and clear source
             traceback.print_exc()
-            source = ""
-            prompt = standard_prompt

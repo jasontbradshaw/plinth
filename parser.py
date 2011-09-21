@@ -261,8 +261,8 @@ if __name__ == "__main__":
 
     source = ""
 
-    standard_prompt = "> "
-    continue_prompt = ": "
+    standard_prompt = "plinth> "
+    continue_prompt = "      : "
     prompt = standard_prompt
 
     while 1:

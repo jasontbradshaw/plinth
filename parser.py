@@ -21,7 +21,7 @@ class Tokens:
     OPEN_PAREN = "("
     CLOSE_PAREN = ")"
     QUOTE = "'"
-    WHITESPACE = "\s+"
+    WHITESPACE = re.compile("\s+")
     ESCAPE_CHAR = "\\"
     STRING = '"'
 
@@ -43,7 +43,7 @@ class Tokens:
 
     @staticmethod
     def is_whitespace(c):
-        return bool(re.match(Tokens.WHITESPACE, c))
+        return bool(Tokens.WHITESPACE.match(c))
 
     @staticmethod
     def is_escape_char(c):

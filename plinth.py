@@ -298,9 +298,12 @@ if __name__ == "__main__":
 
     source = ""
 
-    standard_prompt = "plinth> "
-    continue_prompt = "      : "
+    standard_prompt = "> "
+    continue_prompt = ": "
     prompt = standard_prompt
+
+    print "plinth 0.1"
+    print "-----------"
 
     while 1:
         try:

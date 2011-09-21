@@ -13,13 +13,15 @@ class CloseParenError(ParserError):
 
 class Tokens:
     """
-    A container class for language tokens.
+    A container class for language tokens. Tokens represent themselves, so there
+    is no translation between the syntax representation of a token and the
+    internal representation of a token.
     """
 
     OPEN_PAREN = "("
     CLOSE_PAREN = ")"
     QUOTE = "'"
-    WHITESPACE = "\s"
+    WHITESPACE = "\s+"
     ESCAPE_CHAR = "\\"
     STRING = '"'
 
@@ -50,6 +52,86 @@ class Tokens:
     @staticmethod
     def is_string(c):
         return c == Tokens.STRING
+
+
+def lex(source):
+    """
+    Given a string source, reads it character by character and generates a list
+    of tokens for it.
+    """
+
+    # committed tokens
+    tokens = []
+
+    # buffer where uncommitted characters live
+    buf = []
+
+    def flush_fun(buf):
+        """Copy buffer contents into tokens and empty the buffer."""
+
+        # don't flush if buffer is empty
+        if len(buf) > 0:
+            # append to current indentation level and clear buffer
+            tokens.append(''.join(buf))
+
+            # uses __delslice__ method of the list so we modify original buffer
+            # and not the local copy.
+            del buf[:]
+
+    def token_fun(buf, c):
+        """Add a token as a standalone item to the token list."""
+
+        # flush the buffer to clear out any existing contents
+        flush_fun(buf)
+
+        # add the token to the token list
+        tokens.append(c)
+
+    # work around python's read-only closures
+    flush = lambda: flush_fun(buf)
+    token = lambda c: token_fun(buf, c)
+
+    # iterate over every character in the source string
+    for c in source:
+
+        # only allow for escape character inside strings
+        if Tokens.is_escape_char(c):
+            token(c)
+
+        # end the string and flush if we found an unescaped string token
+        elif Tokens.is_string(c):
+            token(c)
+
+        # consume as much whitespace as possible at one time
+        elif Tokens.is_whitespace(c):
+            if len(buf) == 0 or Tokens.is_whitespace(buf[-1]):
+                buf.append(c)
+            else:
+                flush()
+
+        # open parenthesis
+        elif Tokens.is_open_paren(c):
+            token(c)
+
+        # close parenthesis
+        elif Tokens.is_close_paren(c):
+            token(c)
+
+        # quotes are special tokens
+        elif Tokens.is_quote(c):
+            token(c)
+
+        # just a normal character, so collect it in the buffer
+        else:
+            # flush whitespace from the buffer before adding normal characters
+            if len(buf) > 0 and Tokens.is_whitespace(buf[-1]):
+                flush()
+            buf.append(c)
+
+    # do a final buffer flush to catch any remaining contents
+    flush()
+
+    return tokens
 
 def parse(source):
     """
@@ -188,7 +270,7 @@ if __name__ == "__main__":
             # get input from user and try to parse and print it
             source += " " + raw_input(prompt)
             if source != " ":
-                print parse(source)
+                print lex(source)
 
             # give a new line if user entered nothing
             else:

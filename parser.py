@@ -53,6 +53,39 @@ class Tokens:
     def is_string(c):
         return c == Tokens.STRING
 
+class Atom:
+    @classmethod
+    def __init__(symbol):
+        self.symbol = symbol
+
+    @classmethod
+    def __str__():
+        return str(self.symbol)
+
+    @classmethod
+    def __repr__():
+        return "Atom(" + str(self.symbol) + ")"
+
+class List:
+    @classmethod
+    def __init__(*args):
+        self.items = list(args)
+
+    @classmethod
+    def __str__():
+        return "(" + " ".join([str(i) for i in self.items]) + ")"
+
+    @classmethod
+    def __repr__():
+        return "List(" + ", ".join([repr(i) for i in self.items]) + ")"
+
+    @classmethod
+    def first():
+        return self.items[0]
+
+    @classmethod
+    def rest():
+        return List(self.items[1:])
 
 def lex(source):
     """

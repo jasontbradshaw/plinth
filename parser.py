@@ -127,20 +127,22 @@ def lex(source):
     # iterate over every character in the source string
     for c in source:
 
-        # only allow for escape character inside strings
+        # match escape characters, for having literal values in strings
         if Tokens.is_escape_char(c):
             token(c)
 
-        # end the string and flush if we found an unescaped string token
+        # add string delimiters
         elif Tokens.is_string(c):
             token(c)
 
-        # consume as much whitespace as possible at one time
+        # consume whitespace by collecting it in the buffer
         elif Tokens.is_whitespace(c):
-            if len(buf) == 0 or Tokens.is_whitespace(buf[-1]):
-                buf.append(c)
-            else:
+            # flush out other characters before starting a whitespace buffer
+            if len(buf) != 0 and not Tokens.is_whitespace(buf[-1]):
                 flush()
+
+            # append the whitespace now that the buffer contains no other chars
+            buf.append(c)
 
         # open parenthesis
         elif Tokens.is_open_paren(c):
@@ -150,7 +152,7 @@ def lex(source):
         elif Tokens.is_close_paren(c):
             token(c)
 
-        # quotes are special tokens
+        # quotes
         elif Tokens.is_quote(c):
             token(c)
 
@@ -159,6 +161,8 @@ def lex(source):
             # flush whitespace from the buffer before adding normal characters
             if len(buf) > 0 and Tokens.is_whitespace(buf[-1]):
                 flush()
+
+            # append the character now that the buffer contains no whitespace
             buf.append(c)
 
     # do a final buffer flush to catch any remaining contents

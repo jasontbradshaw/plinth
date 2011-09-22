@@ -24,6 +24,7 @@ class Tokens:
     WHITESPACE = re.compile("\s+")
     ESCAPE_CHAR = "\\"
     STRING = '"'
+    COMMENT = ";"
 
     @classmethod
     def init():
@@ -299,7 +300,6 @@ if __name__ == "__main__":
             print parse(lex(source))
         except KeyboardInterrupt:
             # reset prompt on Ctrl+C
-            prompt = standard_prompt
             print
         except EOFError:
             # exit on Ctrl+D

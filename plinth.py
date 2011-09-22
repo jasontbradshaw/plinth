@@ -21,7 +21,7 @@ class Tokens:
     QUOTE = "'"
     WHITESPACE = frozenset([" ", "\t", "\n", "\r", "\f", "\v"])
     ESCAPE_CHAR = "\\"
-    STRING = '"'
+    STRING = frozenset(['"', "'"])
     COMMENT = ";"
 
     @classmethod
@@ -50,7 +50,7 @@ class Tokens:
 
     @staticmethod
     def is_string(c):
-        return c == Tokens.STRING
+        return c in Tokens.STRING
 
     @staticmethod
     def is_comment(c):
@@ -242,7 +242,9 @@ def parse(token_source):
                 pass
 
             # end the string and flush if we found an unescaped string token
-            elif Tokens.is_string(token):
+            # that matched the initial string token kind. this allows us to
+            # define several different string delimiting tokens.
+            elif token == string_buf[0]:
                 # add the entire string as one token and clear the string buffer
                 add_token(''.join(string_buf))
 

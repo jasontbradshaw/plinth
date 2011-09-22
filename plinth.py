@@ -89,12 +89,9 @@ class List:
 
 def lex(source):
     """
-    Given a string source, reads it character by character and generates a list
-    of tokens for it.
+    Given a string source, returns a generator that reads it character by
+    character and yields all the tokens in sequence.
     """
-
-    # committed tokens
-    tokens = []
 
     # buffer where uncommitted characters live
     buf = []
@@ -102,73 +99,73 @@ def lex(source):
     def flush_fun(buf):
         """Copy buffer contents into tokens and empty the buffer."""
 
-        # don't flush if buffer is empty
-        if len(buf) > 0:
-            # append to current indentation level and clear buffer
-            tokens.append(''.join(buf))
+        # get the contents of the buffer as a string
+        result = ''.join(buf)
 
-            # uses __delslice__ method of the list so we modify original buffer
-            # and not the local copy.
-            del buf[:]
+        # uses __delslice__ method of the list so we modify original buffer
+        # and not the local copy.
+        del buf[:]
 
-    def token_fun(buf, c):
-        """Add a token as a standalone item to the token list."""
-
-        # flush the buffer to clear out any existing contents
-        flush_fun(buf)
-
-        # add the token to the token list
-        tokens.append(c)
+        # return the contents of the buffer
+        return result
 
     # work around python's read-only closures
     flush = lambda: flush_fun(buf)
-    token = lambda c: token_fun(buf, c)
 
     # iterate over every character in the source string
     for c in source:
 
         # match escape characters, for having literal values in strings
         if Tokens.is_escape_char(c):
-            token(c)
+            if len(buf) > 0:
+                yield flush()
+            yield c
 
         # add string delimiters
         elif Tokens.is_string(c):
-            token(c)
+            if len(buf) > 0:
+                yield flush()
+            yield c
 
         # consume whitespace by collecting it in the buffer
         elif Tokens.is_whitespace(c):
             # flush out other characters before starting a whitespace buffer
             if len(buf) != 0 and not Tokens.is_whitespace(buf[-1]):
-                flush()
+                yield flush()
 
             # append the whitespace now that the buffer contains no other chars
             buf.append(c)
 
         # open parenthesis
         elif Tokens.is_open_paren(c):
-            token(c)
+            if len(buf) > 0:
+                yield flush()
+            yield c
 
         # close parenthesis
         elif Tokens.is_close_paren(c):
-            token(c)
+            if len(buf) > 0:
+                yield flush()
+            yield c
 
         # quotes
         elif Tokens.is_quote(c):
-            token(c)
+            if len(buf) > 0:
+                yield flush()
+            yield c
 
         # just a normal character, so collect it in the buffer
         else:
             # flush whitespace from the buffer before adding normal characters
             if len(buf) > 0 and Tokens.is_whitespace(buf[-1]):
-                flush()
+                yield flush()
 
             # append the character now that the buffer contains no whitespace
             buf.append(c)
 
-    # do a final buffer flush to catch any remaining contents
-    flush()
-
-    return tokens
+    # do a final buffer flush to yield any remaining contents
+    if len(buf) > 0:
+        yield flush()
 
 def parse(source):
     """
@@ -309,7 +306,7 @@ if __name__ == "__main__":
         try:
             # get input from user and try to parse and print it
             source = raw_input(prompt)
-            print lex(source)
+            print "lex:", [t for t in lex(source)]
         except KeyboardInterrupt:
             # reset prompt on Ctrl+C
             prompt = standard_prompt

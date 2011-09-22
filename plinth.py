@@ -167,119 +167,108 @@ def lex(source):
     if len(buf) > 0:
         yield flush()
 
-def parse(source):
+def parse(token_source):
     """
-    Given a string source, reads it character by character and generates a parse
-    tree for it.
+    Given a token source, parses the token sequence into an abstract syntax
+    tree.
     """
 
-    # committed tokens
-    tokens = []
+    # where the abstract syntax tree is held
+    ast = []
 
-    # buffer where uncommitted characters live
-    buf = []
+    # stack where the active scope is kept. starts with the ast as the initial
+    # active scope where tokens are added.
+    stack = [ast]
 
-    # stack that keeps track of scopes, where first scope is always tokens list
-    stack = [tokens]
+    def add_token_fun(stack, token):
+        """Adds a token to the active scope on the stack."""
 
-    def flush_fun(stack, buf):
-        """Copy buffer contents into latest scope and empty the buffer."""
+        # add the token to the top-most (active) scope of the stack
+        stack[-1].append(token)
 
-        if len(stack) < 1:
-            raise OpenParenError("Too few opening parenthesis.")
-
-        # don't flush if buffer is empty
-        if len(buf) > 0:
-            # append to current indentation level and clear buffer
-            stack[-1].append(''.join(buf))
-
-            # uses __delslice__ method of the list so we modify original buffer
-            # and not the local copy.
-            del buf[:]
-
-    def indent_fun(stack, buf):
-        """Add another level to tokens when an indentation marker is found."""
-
-        # flush first so we clear the buffer
-        flush_fun(stack, buf)
+    def indent_fun(stack):
+        """Adds an indent level to the ast when an indent marker is found."""
 
         # add a new level to last indent scope and push same list onto stack
         new_scope = []
         stack[-1].append(new_scope)
         stack.append(new_scope)
 
-    def dedent_fun(stack, buf):
-        """Reduce indentation level."""
+    def dedent_fun(stack):
+        """Reduces the indent level, changing the scope that receives tokens."""
 
-        # flush the buffer and remove current level from the stack
-        flush_fun(stack, buf)
+        # remove current level of indentation from the stack
         stack.pop()
 
         if len(stack) < 1:
             raise OpenParenError("Too few opening parenthesis.")
 
     # work around python's read-only closures
-    flush = lambda: flush_fun(stack, buf)
-    indent = lambda: indent_fun(stack, buf)
-    dedent = lambda: dedent_fun(stack, buf)
+    indent = lambda: indent_fun(stack)
+    dedent = lambda: dedent_fun(stack)
+    add_token = lambda token: add_token_fun(stack, token)
+
+    # we keep a buffer of string parts so we can concatenate all the parts of
+    # the string together at once, and so we can check whether we're in a string
+    # and whether tokens are escaped.
+    string_buf = []
 
     # iterate over every character in the source string
-    in_string = False
-    is_escaped = False
-    for c in source:
+    for token in token_source:
 
-        # deal with strings first to avoid triggering other language constructs
-        if in_string:
-            # every character inside a string gets inserted literally
-            buf.append(c)
+        # deal with strings first to avoid triggering other language constructs.
+        # we know we're in a string if something has been added to the string
+        # buffer.
+        if len(string_buf) > 0:
 
-            # treat escaped characters as literal
-            if is_escaped:
-                # reset the escape marker after we've appended the escaped char
-                is_escaped = False
+            # every token in a string gets added literally
+            string_buf.append(token)
 
-            # only allow for escape character inside strings
-            elif Tokens.is_escape_char(c):
-                is_escaped = True
+            # treat escaped characters as literal. this does nothing so that on
+            # the next iteration of the loop, whatever follows the escape char
+            # will be appended literally.
+            if Tokens.is_escape_char(token):
+                pass
+
+            # if the token preceding this token is an escape char, this token
+            # gets appended to the string literally. this will never exceed
+            # bounds since by this point, the string contains AT LEAST a string
+            # token and one other token, guaranteeing that there's an index two
+            # back from the end.
+            elif Tokens.is_escape_char(string_buf[-2]):
+                pass
 
             # end the string and flush if we found an unescaped string token
-            elif Tokens.is_string(c):
-                flush()
-                in_string = False
+            elif Tokens.is_string(token):
+                # add the entire string as one token and clear the string buffer
+                add_token(''.join(string_buf))
 
-        # skip whitespace, flushing the buffer if necessary
-        elif Tokens.is_whitespace(c):
-            flush()
+                # clear the string buffer in-place
+                del string_buf[:]
 
-        # open parenthesis
-        elif Tokens.is_open_paren(c):
+        # skip whitespace
+        elif Tokens.is_whitespace(token):
+            pass
+
+        # open parenthesis indents
+        elif Tokens.is_open_paren(token):
             indent()
 
-        # close parenthesis
-        elif Tokens.is_close_paren(c):
+        # close parenthesis dedents
+        elif Tokens.is_close_paren(token):
             dedent()
 
-        # quotes are special tokens
-        elif Tokens.is_quote(c):
-            flush()
-            buf.append(c)
-            flush()
-
         # mark strings
-        elif Tokens.is_string(c):
+        elif Tokens.is_string(token):
             # mark us as being in a string, let the first case deal with rest
-            buf.append(c)
-            in_string = True
+            string_buf.append(token)
 
-        # just a normal character
+        # just a normal token
         else:
-            buf.append(c)
-
-    # do a final buffer flush to catch any remaining contents
-    flush()
+            add_token(token)
 
     # ensure all strings were correctly closed
-    if in_string:
+    if len(string_buf) > 0:
         raise ParserError("Unclosed string.")
 
     # check to see if we matched all closing parenthesis (first item is always
@@ -287,7 +276,8 @@ def parse(source):
     if len(stack) > 1:
         raise CloseParenError("Too few closing parenthesis.")
 
-    return tokens
+    # return the canonical abstract syntax tree
+    return ast
 
 if __name__ == "__main__":
     import sys
@@ -307,6 +297,7 @@ if __name__ == "__main__":
             # get input from user and try to parse and print it
             source = raw_input(prompt)
             print "lex:", [t for t in lex(source)]
+            print "parse:", parse(lex(source))
         except KeyboardInterrupt:
             # reset prompt on Ctrl+C
             prompt = standard_prompt

@@ -21,7 +21,7 @@ class Tokens:
     QUOTE = "'"
     WHITESPACE = frozenset([" ", "\t", "\n", "\r", "\f", "\v"])
     ESCAPE_CHAR = "\\"
-    STRING = frozenset(['"', "'"])
+    STRING = '"'
     COMMENT = ";"
 
     @classmethod
@@ -50,7 +50,7 @@ class Tokens:
 
     @staticmethod
     def is_string(c):
-        return c in Tokens.STRING
+        return c == Tokens.STRING
 
     @staticmethod
     def is_comment(c):

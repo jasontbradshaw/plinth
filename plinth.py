@@ -52,6 +52,10 @@ class Tokens:
     def is_string(c):
         return c == Tokens.STRING
 
+    @staticmethod
+    def is_comment(c):
+        return c == Tokens.COMMENT
+
 class Atom:
     @classmethod
     def __init__(symbol):

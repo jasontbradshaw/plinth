@@ -1,4 +1,2 @@
 TODO:
- - make the lexer a generator function, so tokens are parsed and consumed on
-   demand rather than all at once (saves evaluation time for invalid
-   expressions)
+ - make parser generate a custom AST instead of using python lists and strings

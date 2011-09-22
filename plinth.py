@@ -1,7 +1,5 @@
 #!/usr/bin/env python
 
-import re
-
 class ParserError(Exception):
     """Raised when parsing input fails."""
 
@@ -21,7 +19,7 @@ class Tokens:
     OPEN_PAREN = "("
     CLOSE_PAREN = ")"
     QUOTE = "'"
-    WHITESPACE = re.compile("\s+")
+    WHITESPACE = frozenset([" ", "\t", "\n", "\r", "\f", "\v"])
     ESCAPE_CHAR = "\\"
     STRING = '"'
     COMMENT = ";"
@@ -44,7 +42,7 @@ class Tokens:
 
     @staticmethod
     def is_whitespace(c):
-        return bool(Tokens.WHITESPACE.match(c))
+        return c in Tokens.WHITESPACE
 
     @staticmethod
     def is_escape_char(c):

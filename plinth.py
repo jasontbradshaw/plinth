@@ -294,10 +294,9 @@ if __name__ == "__main__":
 
     while 1:
         try:
-            # get input from user and try to parse and print it
+            # get input from user and try to lex, parse, and print it
             source = raw_input(prompt)
-            print "lex:", [t for t in lex(source)]
-            print "parse:", parse(lex(source))
+            print parse(lex(source))
         except KeyboardInterrupt:
             # reset prompt on Ctrl+C
             prompt = standard_prompt

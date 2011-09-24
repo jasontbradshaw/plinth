@@ -24,8 +24,7 @@ class Tokens:
     STRING = '"'
     COMMENT = ";"
 
-    @classmethod
-    def init():
+    def init(self):
         raise NotImplementedError("Can't instantiate the 'Tokens' class!")
 
     @staticmethod
@@ -57,38 +56,54 @@ class Tokens:
         return c == Tokens.COMMENT
 
 class Atom:
-    @classmethod
-    def __init__(symbol):
+    def __init__(self, symbol):
         self.symbol = symbol
 
-    @classmethod
-    def __str__():
+    def __str__(self, *args):
         return str(self.symbol)
 
-    @classmethod
-    def __repr__():
-        return "Atom(" + str(self.symbol) + ")"
+    def __repr__(self):
+        return "Atom(" + repr(self.symbol) + ")"
 
-class List:
-    @classmethod
-    def __init__(*args):
-        self.items = list(args)
+class Cons:
+    def __init__(self, first, rest):
+        # we can only make cons of Atom and Cons (or Nil, but it's both)
+        assert isinstance(first, Atom)
+        assert isinstance(rest, Atom) or isinstance(rest, Cons)
 
-    @classmethod
-    def __str__():
-        return "(" + " ".join([str(i) for i in self.items]) + ")"
+        self.first = first
+        self.rest = rest
 
-    @classmethod
-    def __repr__():
-        return "List(" + ", ".join([repr(i) for i in self.items]) + ")"
+    def __str__(self, inner=False):
+        if isinstance(self.rest, Nil):
+            # deal with the special case of (nil . nil)
+            if isinstance(self.first, Nil):
+                result = str(self.first) + " . " + str(self.rest)
+            else:
+                result = self.first.__str__(True)
+        elif isinstance(self.rest, Atom):
+            result = self.first.__str__(True) + " . " + self.rest.__str__(True)
+        else:
+            result = self.first.__str__(True) + " " + self.rest.__str__(True)
 
-    @classmethod
-    def first():
-        return self.items[0]
+        return result if inner else "(" + result + ")"
 
-    @classmethod
-    def rest():
-        return List(self.items[1:])
+    def __repr__(self):
+        return "Cons(" + repr(self.first) + ", " + repr(self.rest) + ")"
+
+class Nil(Atom, Cons):
+    """
+    Represents both 'False' and the empty list.
+    """
+
+    def __init__(self):
+        pass
+
+    def __str__(self, *args):
+        return "nil"
+
+    def __repr__(self):
+        return "Nil()"
 
 def lex(source):
     """

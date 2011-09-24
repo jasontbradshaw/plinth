@@ -110,7 +110,7 @@ class Nil(Atom, Cons):
     def __repr__(self):
         return "Nil()"
 
-def lex(source):
+def tokenize(source):
     """
     Given a string source, returns a generator that reads it character by
     character and yields all the tokens in sequence.
@@ -319,9 +319,9 @@ if __name__ == "__main__":
 
     while 1:
         try:
-            # get input from user and try to lex, parse, and print it
+            # get input from user and try to tokenize, parse, and print it
             source = raw_input(prompt)
-            print parse(lex(source))
+            print parse(tokenize(source))
         except KeyboardInterrupt:
             # reset prompt on Ctrl+C
             print

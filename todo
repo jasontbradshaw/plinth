@@ -1,4 +1,3 @@
 TODO:
- - test the lexer
  - make parser generate a custom AST instead of using python lists and strings
- - test the parser
+ - expand syntactic sugar to full forms, i.e. '<x> -> (quote <x>)

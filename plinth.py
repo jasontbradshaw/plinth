@@ -24,7 +24,12 @@ class Tokens:
     STRING = '"'
     COMMENT = ";"
 
-    def init(self):
+    # easy way to convert syntactic sugar to expanded forms
+    DESUGAR = {
+        "'": "quote"
+    }
+
+    def __init__(self):
         raise NotImplementedError("Can't instantiate the 'Tokens' class!")
 
     @staticmethod

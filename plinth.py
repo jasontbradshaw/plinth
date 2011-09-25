@@ -26,8 +26,8 @@ class Atom(object):
     @staticmethod
     def atomize(token):
         """
-        Takes the given string and returns an Atom representing that string in
-        its most natural form (Boolean, String, Integer, etc.).
+        Takes the given string token and returns an Atom representing that
+        string in its most natural form (Boolean, String, Integer, etc.).
         """
 
         # integer
@@ -326,7 +326,7 @@ class Tokens:
 def parse(token_source):
     """
     Given a token source, parses the token sequence into an abstract syntax
-    tree.
+    tree built from the base elements of the language.
     """
 
     # where the abstract syntax tree is held

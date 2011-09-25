@@ -103,11 +103,48 @@ class String(Atom):
     """
 
     def __init__(self, value):
-        # set the value to the non-delimted string value
-        Atom.__init__(self, str(value)[1:-1])
+        # take the raw string value and convert the escape sequences into Python
+        # literal representations.
+        s = str(value)
+
+        # strip surrounding quotes if necessary
+        if s[0] == Tokens.STRING and s[-1] == s[0]:
+            s = s[1:-1]
+
+        # replace escape sequences with literal values
+        s = s.replace("\\\\", "\\")
+        s = s.replace("\\\"", "\"")
+        s = s.replace("\\a", "\a")
+        s = s.replace("\\b", "\b")
+        s = s.replace("\\f", "\f")
+        s = s.replace("\\n", "\n")
+        s = s.replace("\\r", "\r")
+        s = s.replace("\\t", "\t")
+        s = s.replace("\\v", "\v")
+
+        # set the value to the non-delimted, un-escaped string value
+        Atom.__init__(self, s)
 
     def __str__(self):
-        return Tokens.STRING + str(self.value) + Tokens.STRING
+        # replace literal values with escape sequences
+        s = self.value
+        s = s.replace("\\", "\\\\")
+        s = s.replace("\"", "\\\"")
+        s = s.replace("\a", "\\a")
+        s = s.replace("\b", "\\b")
+        s = s.replace("\f", "\\f")
+        s = s.replace("\n", "\\n")
+        s = s.replace("\r", "\\r")
+        s = s.replace("\t", "\\t")
+        s = s.replace("\v", "\\v")
+
+        return Tokens.STRING + s + Tokens.STRING
+
+    def __repr__(self):
+        # return the literal string given to us, not the internal representation
+        # since that has been un-escaoed.
+        print repr(self.value)
+        return self.__class__.__name__ + "(" + str(self) + ")"
 
 class Symbol(Atom):
     """
@@ -332,6 +369,7 @@ def parse(token_source):
     # the string together at once, and so we can check whether we're in a string
     # and whether tokens are escaped.
     string_buf = []
+    is_escaped = False
 
     # iterate over every character in the source string
     for token in token_source:
@@ -346,21 +384,19 @@ def parse(token_source):
 
             # treat escaped characters as literal. this does nothing so that on
             # the next iteration of the loop, whatever follows the escape char
-            # will be appended literally.
-            if Tokens.is_escape_char(token):
-                pass
+            # will be appended literally. we make sure we're not currently
+            # escaped so we can escape the escape character itself.
+            if Tokens.is_escape_char(token) and not is_escaped:
+                is_escaped = True
 
             # if the token preceding this token is an escape char, this token
-            # gets appended to the string literally. this will never exceed
-            # bounds since by this point, the string contains AT LEAST a string
-            # token and one other token, guaranteeing that there's an index two
-            # back from the end.
-            elif Tokens.is_escape_char(string_buf[-2]):
-                pass
+            # gets appended to the string literally and we switch off escaping.
+            elif is_escaped:
+                is_escaped = False
 
             # end the string and flush if we found an unescaped string token
             # that matched the initial string token kind. this allows us to
-            # define several different string delimiting tokens.
+            # possibly define several different string delimiting tokens.
             elif token == string_buf[0]:
                 # add the entire string as one token and clear the string buffer
                 add_token(''.join(string_buf))

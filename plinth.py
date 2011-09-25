@@ -143,7 +143,6 @@ class String(Atom):
     def __repr__(self):
         # return the literal string given to us, not the internal representation
         # since that has been un-escaoed.
-        print repr(self.value)
         return self.__class__.__name__ + "(" + str(self) + ")"
 
 class Symbol(Atom):

@@ -61,16 +61,25 @@ class Tokens:
         return c == Tokens.COMMENT
 
 class Atom:
-    def __init__(self, symbol):
-        self.symbol = symbol
+    """
+    Represents anything that's not a list: numbers, strings, symbols, etc.
+    """
 
-    def __str__(self, *args):
-        return str(self.symbol)
+    def __init__(self, value):
+        self.value = value
+
+    def __str__(self):
+        return str(self.value)
 
     def __repr__(self):
-        return "Atom(" + repr(self.symbol) + ")"
+        return "Atom(" + repr(self.value) + ")"
 
 class Cons:
+    """
+    Represents both dotted pairs (improper lists) and linked lists of many
+    elements, which end with the empty list, nil.
+    """
+
     def __init__(self, first, rest):
         # we can only make cons of Atom and Cons (or Nil, but it's both)
         assert isinstance(first, Atom)
@@ -79,36 +88,217 @@ class Cons:
         self.first = first
         self.rest = rest
 
+    def __firststr(self, inner):
+        if isinstance(self.first, Cons):
+            return self.first.__str__(inner)
+        return str(self.first)
+
+    def __reststr(self, inner):
+        if isinstance(self.rest, Cons):
+            return self.rest.__str__(inner)
+        return str(self.rest)
+
     def __str__(self, inner=False):
         if isinstance(self.rest, Nil):
             # deal with the special case of (nil . nil)
             if isinstance(self.first, Nil):
-                result = str(self.first) + " . " + str(self.rest)
+                result = self.__firststr(True) + " . " + self.__reststr(True)
             else:
-                result = self.first.__str__(True)
+                result = self.__firststr(True)
         elif isinstance(self.rest, Atom):
-            result = self.first.__str__(True) + " . " + self.rest.__str__(True)
+            result = self.__firststr(True) + " . " + self.__reststr(True)
         else:
-            result = self.first.__str__(True) + " " + self.rest.__str__(True)
+            result = self.__firststr(True) + " " + self.__reststr(True)
 
         return result if inner else "(" + result + ")"
 
     def __repr__(self):
         return "Cons(" + repr(self.first) + ", " + repr(self.rest) + ")"
 
+    def __getitem__(self, index):
+        """
+        Recursively get the item at a given index in the cons chain.
+        """
+
+        # base case, return the first item
+        if index == 0:
+            return self.first
+
+        # non-zero index, should we keep going?
+        elif isinstance(self.rest, Cons) and not isinstance(self.rest, Nil):
+            return self.rest[index - 1]
+
+        # dotted-pair's final item is non-nil and index refers to it
+        elif index == 1 and not isinstance(self.rest, Nil):
+            return self.rest
+
+        raise IndexError("Index out of range")
+
 class Nil(Atom, Cons):
     """
-    Represents both 'False' and the empty list.
+    Represents the empty list.
     """
 
     def __init__(self):
         pass
 
-    def __str__(self, *args):
+    def __str__(self):
         return "nil"
 
     def __repr__(self):
         return "Nil()"
+
+class Number(Atom):
+    """
+    Numbers can be added, subtracted, etc. and hold a single value.
+    """
+
+    def __init__(self, value):
+        Atom.__init__(self, value)
+
+class Integer(Number):
+    """
+    Integers represent numbers with no decimal part.
+    """
+
+    def __init__(self, value):
+        Number.__init__(self, int(value))
+
+    def __str__(self):
+        return str(self.value)
+
+    def __repr__(self):
+        return "Integer(" + repr(self.value) + ")"
+
+class Float(Number):
+    """
+    Floats represent floating-point numbers.
+    """
+
+    def __init__(self, value):
+        Number.__init__(self, float(value))
+
+    def __str__(self):
+        # we use repr to get the entire float value, unrounded
+        return repr(self.value)
+
+    def __repr__(self):
+        return "Float(" + repr(self.value) + ")"
+
+class String(Atom):
+    """
+    Strings are immutable collections of character data. There's no such thing
+    as a 'character' in our language, only single-element strings.
+    """
+
+    def __init__(self, value):
+        # set the value to the non-delimted string value
+        Atom.__init__(self, str(value)[1:-1])
+
+    def __str__(self):
+        return Tokens.STRING + str(self.value) + Tokens.STRING
+
+    def __repr__(self):
+        return "String(" + repr(self.value) + ")"
+
+class Symbol(Atom):
+    """
+    Symbols store other values, and evaluate to their stored values.
+    """
+
+    def __init__(self, value):
+        Atom.__init__(self, value)
+
+    def __repr__(self):
+        return "Symbol(" + repr(self.value) + ")"
+
+class Boolean(Atom):
+    """
+    Represents a single Boolean value.
+    """
+
+    # the strings that represent true and false (upper/lower case are the same)
+    TRUE_STRING = "#t"
+    FALSE_STRING = "#f"
+
+    # where the singleton instances of true and false are stored (get initialzed
+    # by the atomizer on first use).
+    TRUE = None
+    FALSE = None
+
+    def __init__(self, value):
+        Atom.__init__(self, bool(value))
+
+class BoolTrue(Boolean):
+    """
+    Represents the 'true' Boolean value.
+    """
+
+    def __init__(self):
+        Boolean.__init__(self, True)
+
+    def __str__(self):
+        return Boolean.TRUE_STRING
+
+    def __repr__(self):
+        return "BoolTrue()"
+
+class BoolFalse(Boolean):
+    """
+    Represents the 'false' Boolean value.
+    """
+
+    def __init__(self):
+        Boolean.__init__(self, False)
+
+    def __str__(self):
+        return Boolean.FALSE_STRING
+
+    def __repr__(self):
+        return "BoolFalse()"
+
+class Atomizer:
+    """
+    Turns a token into an atom.
+    """
+
+    @classmethod
+    def atomize(token):
+        """
+        Takes the given string and returns an Atom representing that string in
+        its most natural form (boolean, string, etc.).
+        """
+
+        # integer
+        try:
+            return Integer(token)
+        except ValueError:
+            pass
+
+        # float
+        try:
+            return Float(Token)
+        except ValueError:
+            pass
+
+        # boolean
+        if token.lower() == Boolean.TRUE_STRING:
+            # initialze singleton
+            if Boolean.TRUE is None:
+                Boolean.TRUE = BoolTrue()
+            return Boolean.TRUE
+        elif token.lower() == Boolean.FALSE_STRING:
+            # initialze singleton
+            if Boolean.FALSE is None:
+                Boolean.FALSE = BoolFalse()
+            return Boolean.FALSE
+
+        # string
+        elif token[0] == Tokens.STRING and token[-1] == token[0]:
+            return String(token)
+
+        # the base case for all tokens is a symbol
+        return Symbol(token)
 
 def tokenize(source):
     """

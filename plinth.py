@@ -419,6 +419,9 @@ if __name__ == "__main__":
             # get input from user and try to tokenize, parse, and print it
             source = raw_input(prompt)
 
+            # strip comments from the source (it's as if they don't exist)
+            source = source.split(Tokens.COMMENT, 1)[0].strip()
+
             print repr(parse(Tokens.tokenize(source)))
             print parse(Tokens.tokenize(source))
 

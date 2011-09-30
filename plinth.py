@@ -6,8 +6,14 @@ class ParserError(Exception):
 class OpenParenError(ParserError):
     """Raised when there are too few opening parenthesis."""
 
+    def __init__(self):
+        ParserError.__init__(self, "Too few opening parenthesis.")
+
 class CloseParenError(ParserError):
     """Raised when there are too few closing parenthesis."""
+
+    def __init__(self):
+        ParserError.__init__(self, "Too few closing parenthesis.")
 
 class Atom(object):
     """
@@ -400,7 +406,7 @@ def parse(token_source):
         stack.pop()
 
         if len(stack) < 1:
-            raise OpenParenError("Too few opening parenthesis.")
+            raise OpenParenError()
 
     # work around python's read-only closures
     indent = lambda: indent_fun(stack)
@@ -474,7 +480,7 @@ def parse(token_source):
     # check to see if we matched all closing parenthesis (first item is always
     # tokens list, and it never gets popped).
     if len(stack) > 1:
-        raise CloseParenError("Too few closing parenthesis.")
+        raise CloseParenError()
 
     # return the canonical abstract syntax tree
     return ast

@@ -379,7 +379,7 @@ def parse(token_source):
     """
 
     # where the abstract syntax tree is held
-    ast = List()
+    ast = []
 
     # stack where the active scope is kept. starts with the ast as the initial
     # active scope where tokens are added.
@@ -506,8 +506,9 @@ if __name__ == "__main__":
             # strip comments from the source (it's as if they don't exist)
             source = source.split(Tokens.COMMENT, 1)[0].strip()
 
-            print repr(parse(Tokens.tokenize(source)))
-            print parse(Tokens.tokenize(source))
+            for result in parse(Tokens.tokenize(source)):
+                print repr(result)
+                print result
 
         except KeyboardInterrupt:
             # reset prompt on Ctrl+C

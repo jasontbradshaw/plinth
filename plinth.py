@@ -314,6 +314,80 @@ class Environment:
     def __iter__(self):
         return self.items.__iter__()
 
+class Function(Atom):
+    """
+    Represents a function in our language. Functions take some number of
+    arguments, have a body, and are evaluated in some context.
+    """
+
+    def __init__(self, arg_symbols, body, parent):
+        """
+        Creates a function given a list of its argument symbols, its body, and
+        its parent environment, i.e. the environment it was created and will be
+        evaluated in (its closure).
+        """
+
+        self.arg_symbols = tuple(arg_symbols)
+        self.body = body
+        self.parent = parent
+
+    def __str__(self):
+        return "<function (" + ' '.join(map(str, self.arg_symbols)) + ")>"
+
+    def __repr__(self):
+        return (self.__class__.__name__ + "(" +
+                repr(self.arg_symbols) + ", " +
+                repr(self.body) + ", " +
+                repr(self.parent) + ")")
+
+    def __call__(self, *arg_values):
+        """
+        Evaluate this function given a list of values to use for its arguments
+        and return the result.
+        """
+
+        # ensure that we've got the correct number of argument values
+        if len(self.arg_symbols) != len(arg_values):
+            # TODO: create a more specific exception
+            raise Exception("incorrect number of arguments: expected " +
+                    str(len(self.arg_symbols)) + ", got " + str(len(arg_values)))
+
+        # create a new environment with the parent set as our parent enviroment
+        env = Environment(self.parent)
+
+        # put the arguments into the new environment, mapping by position
+        for symbol, value in zip(self.arg_symbols, arg_values):
+            env[symbol] = value
+
+        # evaluate our body using the new environment and return the result
+        return evaluate(self.body, env)
+
+class PrimitiveFunction(Function):
+    """
+    Represents a base-level function that can't be broken down into an AST. One
+    of the constructs that enables the language to function.
+    """
+
+    def __init__(self, method):
+        """
+        Create a primitive function that works much like a normal function,
+        except that the method is a Python function that does work using the
+        arguments given to __call__.
+        """
+
+        self.method = method
+
+    def __str__(self):
+        return "<primitive-function>"
+
+    def __repr__(self):
+        return (self.__class__.__name__ + "(" +
+                repr(self.args) + ", " +
+                repr(self.body) + ")")
+
+    def __call__(self, *args):
+        return self.method(*args)
+
 class Tokens:
     """
     A utility class for language tokens.

@@ -277,7 +277,7 @@ class Tokens:
         buf = []
 
         def flush_fun(buf):
-            """Copy buffer contents into tokens and empty the buffer."""
+            """Returns the buffer contents as a string and clears the buffer."""
 
             # get the contents of the buffer as a string
             result = ''.join(buf)

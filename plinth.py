@@ -418,7 +418,7 @@ class PrimitiveFunction(Function):
             match = PrimitiveFunction.ARGUMENT_REGEX.match(te.message)
 
             if match is not None:
-                # get actual and expected numbers of args (group 0 is entire match)
+                # get actual and expected arg counts (group 0 is entire match)
                 expected = match.group(1)
                 actual = match.group(2)
 

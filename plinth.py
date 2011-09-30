@@ -340,10 +340,12 @@ class Function(Atom):
                 repr(self.body) + ", " +
                 repr(self.parent) + ")")
 
-    def __call__(self, *arg_values):
+    def __call__(self, calling_env, *arg_values):
         """
         Evaluate this function given a list of values to use for its arguments
-        and return the result.
+        and return the result. Evaluates all arguments in the given environment
+        to obtain their values before inserting them into the evaluation
+        environment.
         """
 
         # ensure that we've got the correct number of argument values
@@ -357,7 +359,7 @@ class Function(Atom):
 
         # put the arguments into the new environment, mapping by position
         for symbol, value in zip(self.arg_symbols, arg_values):
-            env[symbol] = value
+            env[symbol] = evaluate(value, calling_env)
 
         # evaluate our body using the new environment and return the result
         return evaluate(self.body, env)
@@ -368,14 +370,16 @@ class PrimitiveFunction(Function):
     of the constructs that enables the language to function.
     """
 
-    def __init__(self, method):
+    def __init__(self, method, evaluate_arguments=True):
         """
         Create a primitive function that works much like a normal function,
         except that the method is a Python function that does work using the
-        arguments given to __call__.
+        arguments given to __call__. The second parameter specifies whether
+        arguments should be evaluated before given to the method.
         """
 
         self.method = method
+        self.evaluate_arguments = evaluate_arguments
 
     def __str__(self):
         return "<primitive-function>"
@@ -385,7 +389,13 @@ class PrimitiveFunction(Function):
                 repr(self.args) + ", " +
                 repr(self.body) + ")")
 
-    def __call__(self, *args):
+    def __call__(self, calling_env, *args):
+        # evaluate our arguments if specified. since quote doesn't do this, we
+        # allow inhibition to be specified when the primite function is created.
+        if self.evaluate_arguments:
+            ev = lambda x: evaluate(x, calling_env)
+            args = map(ev, args)
+
         return self.method(*args)
 
 class Tokens:

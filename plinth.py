@@ -62,7 +62,7 @@ class List:
 
     def __init__(self, *items):
         # save the given items
-        self.items = items
+        self.items = list(items)
 
     def __str__(self):
         return "(" + " ".join(map(str, self.items)) + ")"
@@ -90,6 +90,22 @@ class List:
 
     def __iter__(self):
         return self.items.__iter__()
+
+    def __reversed__(self):
+        # return a reversed copy of ourself as a List
+        return List(*[self[i] for i in xrange(len(self) - 1, -1, -1)])
+
+    def append(self, item):
+        self.items.append(item)
+
+    def extend(self, other_items):
+        self.items.extend(other_items)
+
+    def pop(self, index=None):
+        if index is None:
+            index = len(self) - 1
+
+        self.items.pop(index)
 
 class Number(Atom):
     """

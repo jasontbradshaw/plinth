@@ -7,13 +7,13 @@ class OpenParenError(ParserError):
     """Raised when there are too few opening parenthesis."""
 
     def __init__(self):
-        ParserError.__init__(self, "Too few opening parenthesis.")
+        ParserError.__init__(self, "too few opening parenthesis")
 
 class CloseParenError(ParserError):
     """Raised when there are too few closing parenthesis."""
 
     def __init__(self):
-        ParserError.__init__(self, "Too few closing parenthesis.")
+        ParserError.__init__(self, "too few closing parenthesis")
 
 class Atom(object):
     """
@@ -475,7 +475,7 @@ def parse(token_source):
 
     # ensure all strings were correctly closed
     if len(string_buf) > 0:
-        raise ParserError("Unclosed string.")
+        raise ParserError("unclosed string")
 
     # check to see if we matched all closing parenthesis (first item is always
     # tokens list, and it never gets popped).

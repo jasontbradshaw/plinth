@@ -387,7 +387,7 @@ class PrimitiveFunction(Function):
         Create a primitive function that works much like a normal function,
         except that the method is a Python function that does work using the
         arguments given to __call__. The second parameter specifies whether
-        arguments should be evaluated before given to the method.
+        arguments should be evaluated before being given to the method.
         """
 
         self.method = method

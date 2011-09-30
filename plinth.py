@@ -170,6 +170,13 @@ class Symbol(Atom):
     Symbols store other values, and evaluate to their stored values.
     """
 
+    def __init__(self, value):
+        """
+        Symbols are stored and looked up by their string names.
+        """
+
+        Atom.__init__(self, str(value))
+
 class Boolean(Atom):
     """
     Represents a single Boolean value.

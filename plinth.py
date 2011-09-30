@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+import re
+
 class ParserError(Exception):
     """Raised when parsing input fails."""
 
@@ -20,6 +22,13 @@ class SymbolNotFoundError(Exception):
 
     def __init__(self, symbol):
         Exception.__init__(self, "could not find symbol: " + str(symbol))
+
+class IncorrectArgumentCountError(Exception):
+    """Raised when a function is called with the wrong number of arguments."""
+
+    def __init__(self, expected, actual):
+        Exception.__init__(self, "incorrect number of arguments: expected " +
+                    str(expected) + ", got " + str(actual))
 
 class Atom(object):
     """
@@ -350,9 +359,7 @@ class Function(Atom):
 
         # ensure that we've got the correct number of argument values
         if len(self.arg_symbols) != len(arg_values):
-            # TODO: create a more specific exception
-            raise Exception("incorrect number of arguments: expected " +
-                    str(len(self.arg_symbols)) + ", got " + str(len(arg_values)))
+            raise IncorrectArgumentCountError(len(arg_symbols), len(arg_values))
 
         # create a new environment with the parent set as our parent enviroment
         env = Environment(self.parent)
@@ -369,6 +376,11 @@ class PrimitiveFunction(Function):
     Represents a base-level function that can't be broken down into an AST. One
     of the constructs that enables the language to function.
     """
+
+    # used to parse the actual and expected number of arguments from the error a
+    # function raises when an incorrect number of arguments is given.
+    ARGUMENT_REGEX = re.compile(
+            "^.* takes exactly (\d+) arguments? \((\d+) given\)$")
 
     def __init__(self, method, evaluate_arguments=True):
         """
@@ -396,7 +408,25 @@ class PrimitiveFunction(Function):
             ev = lambda x: evaluate(x, calling_env)
             args = map(ev, args)
 
-        return self.method(*args)
+        try:
+            return self.method(*args)
+
+        # if we had the wrong number of arguments, parse the numbers out and
+        # raise them in an exception.
+        except TypeError, te:
+            # try to match the text for the argument error
+            match = PrimitiveFunction.ARGUMENT_REGEX.match(te.message)
+
+            if match is not None:
+                # get actual and expected numbers of args (group 0 is entire match)
+                expected = match.group(1)
+                actual = match.group(2)
+
+                # raise the error with the parsed argument counts
+                raise IncorrectArgumentCountError(expected, actual)
+
+            # raise the original exception if it didn't match the regex
+            raise te
 
 class Tokens:
     """

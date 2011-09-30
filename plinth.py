@@ -113,8 +113,7 @@ class List:
         return self.items.__iter__()
 
     def __reversed__(self):
-        # return a reversed copy of ourself as a List
-        return List(*[self[i] for i in xrange(len(self) - 1, -1, -1)])
+        return List(reversed(self.items))
 
     def append(self, item):
         self.items.append(item)

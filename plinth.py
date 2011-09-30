@@ -55,21 +55,41 @@ class Atom(object):
         # the base case for all tokens is a symbol
         return Symbol(token)
 
-class List(list):
+class List:
     """
     Represents a linear collection of Atom and List elements.
     """
 
     def __init__(self, *items):
-        # copy the given items into ourself (we're a list, remember?)
-        self[:] = items
+        # save the given items
+        self.items = items
 
     def __str__(self):
-        return "(" + " ".join([str(x) for x in self]) + ")"
+        return "(" + " ".join(map(str, self.items)) + ")"
 
     def __repr__(self):
-        return (self.__class__.__name__ + 
-                "(" + ", ".join([repr(x) for x in self]) + ")")
+        return (self.__class__.__name__ +
+                "(" + ", ".join(map(repr, self.items)) + ")")
+
+    def __sizeof__(self):
+        return len(self.items)
+
+    def __getitem__(self, index):
+        return self.items[index]
+
+    def __setitem__(self, index, value):
+        self.items[index] = value
+
+    def __getslice__(self, start=0, end=None):
+        # set end to our length if not specified
+        if end is None:
+            end = len(self)
+
+        # returns a List, not a list!
+        return List(*self.items[start:end])
+
+    def __iter__(self):
+        return self.items.__iter__()
 
 class Number(Atom):
     """

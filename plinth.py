@@ -83,7 +83,7 @@ class List:
         return (self.__class__.__name__ +
                 "(" + ", ".join(map(repr, self.items)) + ")")
 
-    def __sizeof__(self):
+    def __len__(self):
         return len(self.items)
 
     def __getitem__(self, index):

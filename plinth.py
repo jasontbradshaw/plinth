@@ -132,6 +132,17 @@ class Number(Atom):
     Numbers can be added, subtracted, etc. and hold a single value.
     """
 
+    @staticmethod
+    def to_number(item):
+        """
+        Transforms the given numeric primitive into one of our language's Number
+        objects.
+        """
+
+        if hasattr(item, "is_integer"):
+            return Float(item)
+        return Integer(item)
+
 class Integer(Number):
     """
     Integers represent numbers with no decimal part.
@@ -223,6 +234,14 @@ class Boolean(Atom):
 
     def __init__(self, value):
         Atom.__init__(self, bool(value))
+
+    @staticmethod
+    def to_boolean(item):
+        """
+        Transforms the given boolean primitive into BoolTrue or BoolFalse.
+        """
+
+        return BoolTrue() if item else BoolFalse()
 
 class BoolTrue(Boolean):
     """

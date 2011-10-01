@@ -367,7 +367,7 @@ class Function(Atom):
                 repr(self.body) + ", " +
                 repr(self.parent) + ")")
 
-    def __call__(self, calling_env, *arg_values):
+    def __call__(self, *arg_values):
         """
         Evaluate this function given a list of values to use for its arguments
         and return the result. Evaluates all arguments in the given environment
@@ -382,9 +382,9 @@ class Function(Atom):
         # create a new environment with the parent set as our parent enviroment
         env = Environment(self.parent)
 
-        # put the arguments into the new environment, mapping by position
+        # put the argument values into the new environment, mapping by position
         for symbol, value in zip(self.arg_symbols, arg_values):
-            env[symbol] = evaluate(value, calling_env)
+            env[symbol] = value
 
         # evaluate our body using the new environment and return the result
         return evaluate(self.body, env)
@@ -399,34 +399,26 @@ class PrimitiveFunction(Function):
     # function raises when an incorrect number of arguments is given.
     ARGUMENT_REGEX = re.compile("^.* exactly (\d+) arguments? \((\d+) given\)$")
 
-    def __init__(self, method, evaluate_arguments=True):
+    def __init__(self, method):
         """
         Create a primitive function that works much like a normal function,
         except that the method is a Python function that does work using the
-        arguments given to __call__. The second parameter specifies whether
-        arguments should be evaluated before being given to the method.
+        arguments given to __call__.
         """
 
         self.method = method
-        self.evaluate_arguments = evaluate_arguments
 
     def __str__(self):
         return "<primitive-function>"
 
     def __repr__(self):
         return (self.__class__.__name__ + "(" +
-                repr(self.args) + ", " +
-                repr(self.body) + ")")
+                repr(self.args) + ", " + repr(self.body) + ")")
 
-    def __call__(self, calling_env, *args):
-        # evaluate our arguments if specified. since quote doesn't do this, we
-        # allow inhibition to be specified when the primite function is created.
-        if self.evaluate_arguments:
-            ev = lambda x: evaluate(x, calling_env)
-            args = map(ev, args)
-
+    def __call__(self, *arg_values):
+        # attempt to return the method applied to the given arguments
         try:
-            return self.method(*args)
+            return self.method(*arg_values)
 
         # if we had the wrong number of arguments, parse the numbers out and
         # raise them in an exception.

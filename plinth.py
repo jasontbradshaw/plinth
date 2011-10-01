@@ -741,18 +741,18 @@ def evaluate(item, env=global_env):
     constructs.
     """
 
-    # atom
-    if isinstance(item, Atom):
-        # if it's a symbol, look it up in the environment for its value
-        if isinstance(item, Symbol):
-            return env.find(item)
+    # symbol
+    if isinstance(item, Symbol):
+        # look it up in the environment for its value
+        return env.find(item)
 
-        # otherwise, it's an atom and evaluates to itself
-        else:
-            return item
+    # atom
+    elif not isinstance(item, List):
+        # it's a generic atom and evaluates to itself
+        return item
 
     # list
-    elif isinstance(item, List):
+    else:
         # we can't evaluate functions that have no symbols
         if len(item) == 0:
             # TODO: create a specific exception
@@ -778,9 +778,6 @@ def evaluate(item, env=global_env):
 
         # evaluate the arguments, then apply the function to them
         return function(*map(lambda x: evaluate(x, env), args))
-
-    else:
-        raise Exception("unknown language construct: " + item.__class__.__name__)
 
 if __name__ == "__main__":
     import sys

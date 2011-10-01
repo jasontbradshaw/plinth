@@ -397,8 +397,7 @@ class PrimitiveFunction(Function):
 
     # used to parse the actual and expected number of arguments from the error a
     # function raises when an incorrect number of arguments is given.
-    ARGUMENT_REGEX = re.compile(
-            "^.* takes exactly (\d+) arguments? \((\d+) given\)$")
+    ARGUMENT_REGEX = re.compile("^.* exactly (\d+) arguments? \((\d+) given\)$")
 
     def __init__(self, method, evaluate_arguments=True):
         """

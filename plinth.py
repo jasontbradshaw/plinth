@@ -30,6 +30,9 @@ class IncorrectArgumentCountError(Exception):
         Exception.__init__(self, "incorrect number of arguments: expected " +
                     str(expected) + ", got " + str(actual))
 
+class ApplicationError(Exception):
+    """Raised when a function could not be applied correctly."""
+
 class Atom(object):
     """
     Represents anything that's not a list: numbers, strings, symbols, etc.
@@ -755,8 +758,7 @@ def evaluate(item, env=global_env):
     else:
         # we can't evaluate functions that have no symbols
         if len(item) == 0:
-            # TODO: create a specific exception
-            raise Exception("nothing to apply")
+            raise ApplicationError("nothing to apply")
 
         # evaluate functions using their arguments
         symbol = item[0]
@@ -764,17 +766,14 @@ def evaluate(item, env=global_env):
 
         # make sure our first item is a symbol
         if not isinstance(symbol, Symbol):
-            # TODO: create a specific exception
-            raise Exception("wrong type to apply: " +
-                    symbol.__class__.__name__.lower())
+            raise ApplicationError("wrong type to apply: " + str(symbol))
 
         # lookup the function this symbol is supposed to represent
         function = env.find(symbol)
 
         # make sure our symbol pointed to a function of some sort
         if not isinstance(function, Function):
-            # TODO: create a specific exception
-            raise Exception("wrong type to apply: " + str(function))
+            raise ApplicationError("wrong type to apply: " + str(function))
 
         # evaluate the arguments, then apply the function to them
         return function(*map(lambda x: evaluate(x, env), args))

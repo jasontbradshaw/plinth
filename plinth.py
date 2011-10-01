@@ -684,6 +684,104 @@ def parse(token_source):
     # return the canonical abstract syntax tree
     return ast
 
+def add(a, b):
+    """
+    Adds two Number atoms together and returns the result as another number.
+    """
+
+    assert isinstance(a, Number) and isinstance(b, Number)
+
+    return Number.to_number(a.value + b.value)
+
+def sub(a, b):
+    """
+    Subtracts the second Number from the first Number.
+    """
+
+    assert isinstance(a, Number) and isinstance(b, Number)
+
+    return Number.to_number(a.value - b.value)
+
+def mul(a, b):
+    """
+    Subtracts the second Number from the first Number.
+    """
+
+    assert isinstance(a, Number) and isinstance(b, Number)
+
+    return Number.to_number(a.value * b.value)
+
+def div(a, b):
+    """
+    Subtracts the second Number from the first Number.
+    """
+
+    assert isinstance(a, Number) and isinstance(b, Number)
+
+    return Number.to_number(a.value / b.value)
+
+def quote(e):
+    """
+    Returns its argument as given, preventing evaluation.
+    """
+
+    return e
+
+global_env = Environment(None)
+global_env[Symbol("+")] = PrimitiveFunction(add)
+global_env[Symbol("-")] = PrimitiveFunction(sub)
+global_env[Symbol("*")] = PrimitiveFunction(mul)
+global_env[Symbol("/")] = PrimitiveFunction(div)
+global_env[Symbol("quote")] = PrimitiveFunction(quote)
+
+def evaluate(item, env=global_env):
+    """
+    Given an Atom or List element, evaluates it using the given environment
+    (global by default) and returns the result as represented in our language
+    constructs.
+    """
+
+    # atom
+    if isinstance(item, Atom):
+        # if it's a symbol, look it up in the environment for its value
+        if isinstance(item, Symbol):
+            return env.find(item)
+
+        # otherwise, it's an atom and evaluates to itself
+        else:
+            return item
+
+    # list
+    elif isinstance(item, List):
+        # we can't evaluate functions that have no symbols
+        if len(item) == 0:
+            # TODO: create a specific exception
+            raise Exception("nothing to apply")
+
+        # evaluate functions using their arguments
+        symbol = item[0]
+        args = item[1:]
+
+        # make sure our first item is a symbol
+        if not isinstance(symbol, Symbol):
+            # TODO: create a specific exception
+            raise Exception("wrong type to apply: " +
+                    symbol.__class__.__name__.lower())
+
+        # lookup the function this symbol is supposed to represent
+        function = env.find(symbol)
+
+        # make sure our symbol pointed to a function of some sort
+        if not isinstance(function, Function):
+            # TODO: create a specific exception
+            raise Exception("wrong type to apply: " + str(function))
+
+        # evaluate the arguments, then apply the function to them
+        return function(*map(lambda x: evaluate(x, env), args))
+
+    else:
+        raise Exception("unknown language construct: " + item.__class__.__name__)
+
 if __name__ == "__main__":
     import sys
     import traceback
@@ -706,8 +804,7 @@ if __name__ == "__main__":
             source = source.split(Tokens.COMMENT, 1)[0].strip()
 
             for result in parse(Tokens.tokenize(source)):
-                print repr(result)
-                print result
+                print evaluate(result)
 
         except KeyboardInterrupt:
             # reset prompt on Ctrl+C

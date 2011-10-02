@@ -823,7 +823,7 @@ def evaluate(item, env=global_env):
 
             # make sure we're defining to a symbol
             if not isinstance(symbol, Symbol):
-                raise TypeError("not a symbol: " + symbol)
+                raise TypeError("not a symbol: " + str(symbol))
 
             # evaluate the argument, map the symbol to the result in the current
             # environment, then return the evaluated value. this allows for

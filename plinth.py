@@ -380,7 +380,8 @@ class Function(Atom):
 
         # ensure that we've got the correct number of argument values
         if len(self.arg_symbols) != len(arg_values):
-            raise IncorrectArgumentCountError(len(arg_symbols), len(arg_values))
+            raise IncorrectArgumentCountError(
+                    len(self.arg_symbols), len(arg_values))
 
         # create a new environment with the parent set as our parent enviroment
         env = Environment(self.parent)

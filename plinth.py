@@ -21,14 +21,14 @@ class SymbolNotFoundError(Exception):
     """Raised when a symbol could not be found in an environment chain."""
 
     def __init__(self, symbol):
-        Exception.__init__(self, "could not find symbol: " + str(symbol))
+        Exception.__init__(self, "could not find " + str(symbol))
 
 class IncorrectArgumentCountError(Exception):
     """Raised when a function is called with the wrong number of arguments."""
 
     def __init__(self, expected, actual):
-        Exception.__init__(self, "incorrect number of arguments: expected " +
-                    str(expected) + ", got " + str(actual))
+        Exception.__init__(self, "expected " + str(expected) +
+                ", got " + str(actual))
 
 class ApplicationError(Exception):
     """Raised when a function could not be applied correctly."""

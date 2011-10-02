@@ -425,8 +425,8 @@ class PrimitiveFunction(Function):
         return "<primitive-function (" + ' '.join(self.arg_names) + ")>"
 
     def __repr__(self):
-        return (self.__class__.__name__ + "(" +
-                repr(self.args) + ", " + repr(self.body) + ")")
+        return (self.__class__.__name__ + "(" + repr(self.method) + ", " +
+                ", ".join(map(repr, self.arg_names)) + ")")
 
     def __call__(self, *arg_values):
         # attempt to return the method applied to the given arguments

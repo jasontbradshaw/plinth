@@ -410,17 +410,19 @@ class PrimitiveFunction(Function):
     # function raises when an incorrect number of arguments is given.
     ARGUMENT_REGEX = re.compile("^.* exactly (\d+) arguments? \((\d+) given\)$")
 
-    def __init__(self, method):
+    def __init__(self, method, *arg_names):
         """
         Create a primitive function that works much like a normal function,
         except that the method is a Python function that does work using the
-        arguments given to __call__.
+        arguments given to __call__. Also takes a list of argument names to be
+        used when printing the function to the console.
         """
 
         self.method = method
+        self.arg_names = arg_names
 
     def __str__(self):
-        return "<primitive-function>"
+        return "<primitive-function (" + ' '.join(self.arg_names) + ")>"
 
     def __repr__(self):
         return (self.__class__.__name__ + "(" +
@@ -745,9 +747,9 @@ def div(a, b):
 # functions, and if so we evaluate it in whatever way it requires. this allows
 # the user to define new symbols that point to these functions, but still have
 # the functions work in the same way.
-quote = PrimitiveFunction(None)
-lambda_ = PrimitiveFunction(None)
-define = PrimitiveFunction(None)
+quote = PrimitiveFunction(None, "e")
+lambda_ = PrimitiveFunction(None, "args", "body")
+define = PrimitiveFunction(None, "symbol", "value")
 
 # the base environment for the interpreter
 global_env = Environment(None)
@@ -758,10 +760,10 @@ global_env[Symbol(Tokens.LAMBDA)] = lambda_
 global_env[Symbol(Tokens.DEFINE)] = define
 
 # self-contained functions that need no special assistance
-global_env[Symbol(Tokens.ADD)] = PrimitiveFunction(add)
-global_env[Symbol(Tokens.SUBTRACT)] = PrimitiveFunction(sub)
-global_env[Symbol(Tokens.MULTIPLY)] = PrimitiveFunction(mul)
-global_env[Symbol(Tokens.DIVIDE)] = PrimitiveFunction(div)
+global_env[Symbol(Tokens.ADD)] = PrimitiveFunction(add, "a", "b")
+global_env[Symbol(Tokens.SUBTRACT)] = PrimitiveFunction(sub, "a", "b")
+global_env[Symbol(Tokens.MULTIPLY)] = PrimitiveFunction(mul, "a", "b")
+global_env[Symbol(Tokens.DIVIDE)] = PrimitiveFunction(div, "a", "b")
 
 def evaluate(item, env=global_env):
     """

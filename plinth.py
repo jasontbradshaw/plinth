@@ -357,6 +357,13 @@ class Function(Atom):
         evaluated in (its closure).
         """
 
+        assert isinstance(parent, Environment)
+
+        # all arguments must be symbols
+        for item in arg_symbols:
+            if not isinstance(item, Symbol):
+                raise TypeError("not a symbol: " + item)
+
         self.arg_symbols = tuple(arg_symbols)
         self.body = body
         self.parent = parent
@@ -454,9 +461,18 @@ class Tokens:
     STRING = '"'
     COMMENT = ";"
 
+    # larger tokens, namely for special functions in the language
+    QUOTE_LONG = "quote"
+    LAMBDA = "lambda"
+    DEFINE = "define"
+    ADD = "+"
+    SUBTRACT = "-"
+    MULTIPLY = "*"
+    DIVIDE = "/"
+
     # easy way to convert syntactic sugar to expanded forms
     DESUGAR = {
-        "'": "quote"
+        QUOTE: QUOTE_LONG
     }
 
     def __init__(self):
@@ -724,19 +740,28 @@ def div(a, b):
 
     return Number.to_number(a.value / b.value)
 
-def quote(e):
-    """
-    Returns its argument as given, preventing evaluation.
-    """
+# these functions serve as markers for whether the function being called is
+# special. we check to see if the function for the symbol is one of these
+# functions, and if so we evaluate it in whatever way it requires. this allows
+# the user to define new symbols that point to these functions, but still have
+# the functions work in the same way.
+quote = PrimitiveFunction(None)
+lambda_ = PrimitiveFunction(None)
+define = PrimitiveFunction(None)
 
-    return e
-
+# the base environment for the interpreter
 global_env = Environment(None)
-global_env[Symbol("+")] = PrimitiveFunction(add)
-global_env[Symbol("-")] = PrimitiveFunction(sub)
-global_env[Symbol("*")] = PrimitiveFunction(mul)
-global_env[Symbol("/")] = PrimitiveFunction(div)
-global_env[Symbol("quote")] = PrimitiveFunction(quote)
+
+# functions that need special treatment during evaluation
+global_env[Symbol(Tokens.QUOTE_LONG)] = quote
+global_env[Symbol(Tokens.LAMBDA)] = lambda_
+global_env[Symbol(Tokens.DEFINE)] = define
+
+# self-contained functions that need no special assistance
+global_env[Symbol(Tokens.ADD)] = PrimitiveFunction(add)
+global_env[Symbol(Tokens.SUBTRACT)] = PrimitiveFunction(sub)
+global_env[Symbol(Tokens.MULTIPLY)] = PrimitiveFunction(mul)
+global_env[Symbol(Tokens.DIVIDE)] = PrimitiveFunction(div)
 
 def evaluate(item, env=global_env):
     """
@@ -757,27 +782,64 @@ def evaluate(item, env=global_env):
 
     # list
     else:
-        # we can't evaluate functions that have no symbols
+        # we can't evaluate functions that have nothing in them
         if len(item) == 0:
             raise ApplicationError("nothing to apply")
 
         # evaluate functions using their arguments
-        symbol = item[0]
+        function = evaluate(item[0])
         args = item[1:]
 
-        # make sure our first item is a symbol
-        if not isinstance(symbol, Symbol):
-            raise ApplicationError("wrong type to apply: " + str(symbol))
-
-        # lookup the function this symbol is supposed to represent
-        function = env.find(symbol)
-
-        # make sure our symbol pointed to a function of some sort
+        # make sure our first item evaluated to a function
         if not isinstance(function, Function):
             raise ApplicationError("wrong type to apply: " + str(function))
 
-        # evaluate the arguments, then apply the function to them
-        return function(*map(lambda x: evaluate(x, env), args))
+        # quote
+        if function is quote:
+            if len(args) != 1:
+                raise IncorrectArgumentCountError(1, len(args))
+
+            # return the argument to quote unevaluated
+            return args[0]
+
+        # function
+        elif function is lambda_:
+            if len(args) != 2:
+                raise IncorrectArgumentCountError(2, len(args))
+
+            arg_symbols = args[0]
+            body = args[1]
+
+            # return a function with the current environment as the parent
+            return Function(arg_symbols, body, env)
+
+        # define
+        elif function is define:
+            if len(args) != 2:
+                raise IncorrectArgumentCountError(2, len(args))
+
+            symbol = args[0]
+            value = args[1]
+
+            # make sure we're defining to a symbol
+            if not isinstance(symbol, Symbol):
+                raise TypeError("not a symbol: " + symbol)
+
+            # evaluate the argument, map the symbol to the result in the current
+            # environment, then return the evaluated value. this allows for
+            # chains of definitions, or simultaneous variable assignments to the
+            # same value.
+            result = evaluate(value)
+            env[symbol] = result
+            return result
+
+        else:
+            # evaluate the arguments normally before passing them to the
+            # function and receiving the result.
+            return function(*map(lambda x: evaluate(x, env), args))
+
+        # we should never get this far
+        assert False
 
 if __name__ == "__main__":
     import sys

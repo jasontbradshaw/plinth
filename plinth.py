@@ -455,6 +455,7 @@ class Tokens:
     A utility class for language tokens.
     """
 
+    # base syntactic constructs
     OPEN_PAREN = "("
     CLOSE_PAREN = ")"
     QUOTE = "'"
@@ -471,6 +472,16 @@ class Tokens:
     SUBTRACT = "-"
     MULTIPLY = "*"
     DIVIDE = "/"
+
+    # type predicates
+    BOOLEANP = "boolean?"
+    LISTP = "list?"
+    SYMBOLP = "symbol?"
+    STRINGP = "string?"
+    NUMBERP = "number?"
+    INTEGERP = "integer?"
+    FLOATP = "float?"
+    FUNCTIONP = "function?"
 
     # easy way to convert syntactic sugar to expanded forms
     DESUGAR = {
@@ -707,40 +718,72 @@ def parse(token_source):
     return ast
 
 def add(a, b):
-    """
-    Adds two Number atoms together and returns the result as another number.
-    """
+    """Adds the first Number to the second and returns the result."""
 
     assert isinstance(a, Number) and isinstance(b, Number)
 
     return Number.to_number(a.value + b.value)
 
 def sub(a, b):
-    """
-    Subtracts the second Number from the first Number.
-    """
+    """Subtracts the second Number from the first Number."""
 
     assert isinstance(a, Number) and isinstance(b, Number)
 
     return Number.to_number(a.value - b.value)
 
 def mul(a, b):
-    """
-    Subtracts the second Number from the first Number.
-    """
+    """Subtracts the second Number from the first Number."""
 
     assert isinstance(a, Number) and isinstance(b, Number)
 
     return Number.to_number(a.value * b.value)
 
 def div(a, b):
-    """
-    Subtracts the second Number from the first Number.
-    """
+    """Subtracts the second Number from the first Number."""
 
     assert isinstance(a, Number) and isinstance(b, Number)
 
     return Number.to_number(a.value / b.value)
+
+def booleanp(e):
+    """Returns whether an element is a boolean or not."""
+
+    return Boolean.to_boolean(isinstance(e, Boolean))
+
+def listp(e):
+    """Returns whether an element is a list or not."""
+
+    return Boolean.to_boolean(isinstance(e, List))
+
+def symbolp(e):
+    """Returns whether an element is a symbol or not."""
+
+    return Boolean.to_boolean(isinstance(e, Symbol))
+
+def stringp(e):
+    """Returns whether an element is a string or not."""
+
+    return Boolean.to_boolean(isinstance(e, String))
+
+def numberp(e):
+    """Returns whether an element is a number or not."""
+
+    return Boolean.to_boolean(isinstance(e, Number))
+
+def integerp(e):
+    """Returns whether an element is an integer or not."""
+
+    return Boolean.to_boolean(isinstance(e, Integer))
+
+def floatp(e):
+    """Returns whether an element is a float or not."""
+
+    return Boolean.to_boolean(isinstance(e, Float))
+
+def functionp(e):
+    """Returns whether an element is a function or not."""
+
+    return Boolean.to_boolean(isinstance(e, Function))
 
 # these functions serve as markers for whether the function being called is
 # special. we check to see if the function for the symbol is one of these
@@ -760,10 +803,21 @@ global_env[Symbol(Tokens.LAMBDA)] = lambda_
 global_env[Symbol(Tokens.DEFINE)] = define
 
 # self-contained functions that need no special assistance
+# math
 global_env[Symbol(Tokens.ADD)] = PrimitiveFunction(add, "a", "b")
 global_env[Symbol(Tokens.SUBTRACT)] = PrimitiveFunction(sub, "a", "b")
 global_env[Symbol(Tokens.MULTIPLY)] = PrimitiveFunction(mul, "a", "b")
 global_env[Symbol(Tokens.DIVIDE)] = PrimitiveFunction(div, "a", "b")
+
+# type checking
+global_env[Symbol(Tokens.BOOLEANP)] = PrimitiveFunction(booleanp, "a")
+global_env[Symbol(Tokens.LISTP)] = PrimitiveFunction(listp, "a")
+global_env[Symbol(Tokens.SYMBOLP)] = PrimitiveFunction(symbolp, "a")
+global_env[Symbol(Tokens.STRINGP)] = PrimitiveFunction(stringp, "a")
+global_env[Symbol(Tokens.NUMBERP)] = PrimitiveFunction(numberp, "a")
+global_env[Symbol(Tokens.INTEGERP)] = PrimitiveFunction(integerp, "a")
+global_env[Symbol(Tokens.FLOATP)] = PrimitiveFunction(floatp, "a")
+global_env[Symbol(Tokens.FUNCTIONP)] = PrimitiveFunction(functionp, "a")
 
 def evaluate(item, env=global_env):
     """

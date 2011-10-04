@@ -493,32 +493,36 @@ class Tokens:
                 self.__class__.__name__ + "' class!")
 
     @staticmethod
-    def is_open_paren(c):
-        return c == Tokens.OPEN_PAREN
+    def is_open_paren(token):
+        return token == Tokens.OPEN_PAREN
 
     @staticmethod
-    def is_close_paren(c):
-        return c == Tokens.CLOSE_PAREN
+    def is_close_paren(token):
+        return token == Tokens.CLOSE_PAREN
 
     @staticmethod
-    def is_quote(c):
-        return c == Tokens.QUOTE
+    def is_quote(token):
+        return token == Tokens.QUOTE
 
     @staticmethod
-    def is_whitespace(c):
-        return c in Tokens.WHITESPACE
+    def is_whitespace(token):
+        # return whether all the characters in the token are whitespace
+        for c in token:
+            if c not in Tokens.WHITESPACE:
+                return False
+        return True
 
     @staticmethod
-    def is_escape_char(c):
-        return c == Tokens.ESCAPE_CHAR
+    def is_escape_char(token):
+        return token == Tokens.ESCAPE_CHAR
 
     @staticmethod
-    def is_string(c):
-        return c == Tokens.STRING
+    def is_string(token):
+        return token == Tokens.STRING
 
     @staticmethod
-    def is_comment(c):
-        return c == Tokens.COMMENT
+    def is_comment(token):
+        return token == Tokens.COMMENT
 
     @staticmethod
     def tokenize(source):

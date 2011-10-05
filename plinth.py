@@ -483,6 +483,11 @@ class Tokens:
     FLOATP = "float?"
     FUNCTIONP = "function?"
 
+    # misc
+    NTH = "nth"
+    SLICE = "slice"
+    LENGTH = "length"
+
     # easy way to convert syntactic sugar to expanded forms
     DESUGAR = {
         QUOTE: QUOTE_LONG
@@ -789,6 +794,48 @@ def functionp(e):
 
     return Boolean.to_boolean(isinstance(e, Function))
 
+def nth(index, lst):
+    """
+    Returns the nth element of a list, or raises an error if no such index
+    exists or the element isn't a list.
+    """
+
+    # make sure we've got a list and an integer to work with
+    if not isinstance(lst, List):
+        raise TypeError("cannot index into non-list")
+    elif not isinstance(index, Integer):
+        raise TypeError("index must be an integer")
+
+    # throws a nice index error by itself, we don't need to wrap it
+    return lst[index.value]
+
+def slice_(start, end, lst):
+    """
+    Returns a list containing the elements from start (inclusive) to end
+    (exclusive) in the given list.
+    """
+
+    # make sure we've got a list and integers to work with
+    if not isinstance(lst, List):
+        raise TypeError("cannot index into non-list")
+    elif not isinstance(start, Integer):
+        raise TypeError("start must be an integer")
+    elif not isinstance(end, Integer):
+        raise TypeError("end must be an integer")
+
+    return lst[start.value:end.value]
+
+def length(lst):
+    """
+    Returns the length of a list.
+    """
+
+    # make sure we have a list
+    if not isinstance(lst, List):
+        raise TypeError("cannot get length of non-list")
+
+    return Integer(len(lst))
+
 # these functions serve as markers for whether the function being called is
 # special. we check to see if the function for the symbol is one of these
 # functions, and if so we evaluate it in whatever way it requires. this allows
@@ -813,7 +860,7 @@ global_env[Symbol(Tokens.SUBTRACT)] = PrimitiveFunction(sub, "a", "b")
 global_env[Symbol(Tokens.MULTIPLY)] = PrimitiveFunction(mul, "a", "b")
 global_env[Symbol(Tokens.DIVIDE)] = PrimitiveFunction(div, "a", "b")
 
-# type checking
+# types
 global_env[Symbol(Tokens.BOOLEANP)] = PrimitiveFunction(booleanp, "a")
 global_env[Symbol(Tokens.LISTP)] = PrimitiveFunction(listp, "a")
 global_env[Symbol(Tokens.SYMBOLP)] = PrimitiveFunction(symbolp, "a")
@@ -822,6 +869,11 @@ global_env[Symbol(Tokens.NUMBERP)] = PrimitiveFunction(numberp, "a")
 global_env[Symbol(Tokens.INTEGERP)] = PrimitiveFunction(integerp, "a")
 global_env[Symbol(Tokens.FLOATP)] = PrimitiveFunction(floatp, "a")
 global_env[Symbol(Tokens.FUNCTIONP)] = PrimitiveFunction(functionp, "a")
+
+# list
+global_env[Symbol(Tokens.NTH)] = PrimitiveFunction(nth, "index", "list")
+global_env[Symbol(Tokens.SLICE)] = PrimitiveFunction(slice_, "start", "end", "list")
+global_env[Symbol(Tokens.LENGTH)] = PrimitiveFunction(length, "list")
 
 def evaluate(item, env=global_env):
     """

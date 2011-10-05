@@ -464,10 +464,12 @@ class Tokens:
     STRING = '"'
     COMMENT = ";"
 
-    # larger tokens, namely for special functions in the language
+    # special functions
     QUOTE_LONG = "quote"
     LAMBDA = "lambda"
     DEFINE = "define"
+
+    # math
     ADD = "+"
     SUBTRACT = "-"
     MULTIPLY = "*"
@@ -483,7 +485,7 @@ class Tokens:
     FLOATP = "float?"
     FUNCTIONP = "function?"
 
-    # misc
+    # list
     NTH = "nth"
     SLICE = "slice"
     LENGTH = "length"

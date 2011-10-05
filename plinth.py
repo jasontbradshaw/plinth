@@ -2,6 +2,10 @@
 
 import re
 
+#
+# exceptions
+#
+
 class ParserError(Exception):
     """Raised when parsing input fails."""
 
@@ -32,6 +36,10 @@ class IncorrectArgumentCountError(Exception):
 
 class ApplicationError(Exception):
     """Raised when a function could not be applied correctly."""
+
+#
+# language constructs
+#
 
 class Atom(object):
     """
@@ -274,76 +282,6 @@ class BoolFalse(Boolean):
     def __repr__(self):
         return self.__class__.__name__ + "()"
 
-class Environment:
-    """
-    A scope that holds variables mapped to their values. Allows us to easily
-    package execution state.
-    """
-
-    def __init__(self, parent):
-        """
-        Create an environment with the given parent and any number of predefined
-        variables.
-        """
-
-        # the environment that contains this environment
-        self.parent = parent
-
-        # where we keep our symbol name to value mappings
-        self.items = {}
-
-    def find(self, symbol):
-        """
-        Attempts to locate a given symbol by name in the current environment,
-        then in every environment up the parent chain if the symbol could not be
-        found. If the symbol is not bound within the parent chain, raises an
-        error.
-        """
-
-        # make sure we're getting a symbol
-        assert isinstance(symbol, Symbol)
-
-        if symbol in self:
-            return self[symbol]
-        elif isinstance(self.parent, Environment):
-            return self.parent.find(symbol)
-        else:
-            raise SymbolNotFoundError(symbol)
-
-    def update(self, other_dict):
-        """
-        Copy all the values in another dict into the environment.
-        """
-
-        for key in other_dict:
-            self[key] = other_dict[key]
-
-    def __str__(self):
-        return str(self.items)
-
-    def __repr__(self):
-        return (self.__class__.__name__ + "(" +
-                repr(self.parent) + ", " + repr(self.items) + ")")
-
-    def __getitem__(self, symbol):
-        assert isinstance(symbol, Symbol)
-
-        return self.items[symbol.value]
-
-    def __setitem__(self, symbol, value):
-        assert isinstance(symbol, Symbol)
-        assert isinstance(value, Atom) or isinstance(value, List)
-
-        self.items[symbol.value] = value
-
-    def __contains__(self, symbol):
-        assert isinstance(symbol, Symbol)
-
-        return symbol.value in self.items
-
-    def __iter__(self):
-        return self.items.__iter__()
-
 class Function(Atom):
     """
     Represents a function in our language. Functions take some number of
@@ -449,6 +387,80 @@ class PrimitiveFunction(Function):
 
             # raise the original exception if it didn't match the regex
             raise te
+
+class Environment:
+    """
+    A scope that holds variables mapped to their values. Allows us to easily
+    package execution state.
+    """
+
+    def __init__(self, parent):
+        """
+        Create an environment with the given parent and any number of predefined
+        variables.
+        """
+
+        # the environment that contains this environment
+        self.parent = parent
+
+        # where we keep our symbol name to value mappings
+        self.items = {}
+
+    def find(self, symbol):
+        """
+        Attempts to locate a given symbol by name in the current environment,
+        then in every environment up the parent chain if the symbol could not be
+        found. If the symbol is not bound within the parent chain, raises an
+        error.
+        """
+
+        # make sure we're getting a symbol
+        assert isinstance(symbol, Symbol)
+
+        if symbol in self:
+            return self[symbol]
+        elif isinstance(self.parent, Environment):
+            return self.parent.find(symbol)
+        else:
+            raise SymbolNotFoundError(symbol)
+
+    def update(self, other_dict):
+        """
+        Copy all the values in another dict into the environment.
+        """
+
+        for key in other_dict:
+            self[key] = other_dict[key]
+
+    def __str__(self):
+        return str(self.items)
+
+    def __repr__(self):
+        return (self.__class__.__name__ + "(" +
+                repr(self.parent) + ", " + repr(self.items) + ")")
+
+    def __getitem__(self, symbol):
+        assert isinstance(symbol, Symbol)
+
+        return self.items[symbol.value]
+
+    def __setitem__(self, symbol, value):
+        assert isinstance(symbol, Symbol)
+        assert isinstance(value, Atom) or isinstance(value, List)
+
+        self.items[symbol.value] = value
+
+    def __contains__(self, symbol):
+        assert isinstance(symbol, Symbol)
+
+        return symbol.value in self.items
+
+    def __iter__(self):
+        return self.items.__iter__()
+
+#
+# tokenizer
+#
 
 class Tokens:
     """
@@ -615,6 +627,10 @@ class Tokens:
         # do a final buffer flush to yield any remaining contents
         if len(buf) > 0:
             yield flush()
+
+#
+# interpreter
+#
 
 def parse(token_source):
     """

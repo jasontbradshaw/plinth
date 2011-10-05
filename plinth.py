@@ -468,6 +468,7 @@ class Tokens:
     QUOTE_LONG = "quote"
     LAMBDA = "lambda"
     DEFINE = "define"
+    IF = "if"
 
     # math
     ADD = "+"
@@ -846,6 +847,7 @@ def length(lst):
 quote = PrimitiveFunction(None, "e")
 lambda_ = PrimitiveFunction(None, "args", "body")
 define = PrimitiveFunction(None, "symbol", "value")
+if_ = PrimitiveFunction(None, "cond", "success", "failure")
 
 # the base environment for the interpreter
 global_env = Environment(None)
@@ -854,6 +856,7 @@ global_env = Environment(None)
 global_env[Symbol(Tokens.QUOTE_LONG)] = quote
 global_env[Symbol(Tokens.LAMBDA)] = lambda_
 global_env[Symbol(Tokens.DEFINE)] = define
+global_env[Symbol(Tokens.IF)] = if_
 
 # self-contained functions that need no special assistance
 # math
@@ -946,6 +949,20 @@ def evaluate(item, env=global_env):
             result = evaluate(value)
             env[symbol] = result
             return result
+
+        # if
+        elif function is if_:
+            if len(args) != 3:
+                raise IncorrectArgumentCountError(3, len(args))
+
+            cond = args[0]
+            success_clause = args[1]
+            failure_clause = args[2]
+
+            # every value is considered #t except for #f
+            if isinstance(evaluate(cond), BoolFalse):
+                return evaluate(failure_clause)
+            return evaluate(success_clause)
 
         else:
             # evaluate the arguments normally before passing them to the

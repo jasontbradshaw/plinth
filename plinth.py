@@ -482,6 +482,10 @@ class Tokens:
     DEFINE = "define"
     IF = "if"
 
+    # functional programming
+    MAP = "map"
+    APPLY = "apply"
+
     # math
     ADD = "+"
     SUBTRACT = "-"
@@ -959,6 +963,18 @@ def lte(a, b):
 
     return Boolean.to_boolean(a.value <= b.value)
 
+def apply_(f, args):
+    """
+    Applies a function to some arguments and returns the result.
+    """
+
+    if not isinstance(f, Function):
+        raise TypeError("wrong type to apply: " + str(f))
+    elif not isinstance(args, List):
+        raise TypeError("wrong type for arguments: " + str(args))
+
+    return f(*args)
+
 # these functions serve as markers for whether the function being called is
 # special. we check to see if the function for the symbol is one of these
 # functions, and if so we evaluate it in whatever way it requires. this allows
@@ -987,6 +1003,9 @@ p(Tokens.ADD, add, "a", "b")
 p(Tokens.SUBTRACT, sub, "a", "b")
 p(Tokens.MULTIPLY, mul, "a", "b")
 p(Tokens.DIVIDE, div, "a", "b")
+
+# functional programming
+p(Tokens.APPLY, apply_, "f", "args")
 
 # comparison
 p(Tokens.IS, is_, "a", "b")

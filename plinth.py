@@ -806,15 +806,20 @@ def parse(token_source):
     # return the canonical abstract syntax tree
     return ast
 
-def add(a, b):
-    """Adds the first Number to the second and returns the result."""
+def add(a, b, *rest):
+    """Adds the all the given numbers together."""
 
-    if not isinstance(a, Number):
-        raise WrongArgumentTypeError(a, Number)
-    elif not isinstance(b, Number):
-        raise WrongArgumentTypeError(b, Number)
+    # gather all the arguments into one list
+    nums = [a, b] + list(rest)
 
-    return Number.to_number(a.value + b.value)
+    # add all the arguments together while checking type
+    total = 0
+    for n in nums:
+        if not isinstance(n, Number):
+            raise WrongArgumentTypeError(n, Number)
+        total += n.value
+
+    return Number.to_number(total)
 
 def sub(a, b):
     """Subtracts the second Number from the first Number."""
@@ -826,15 +831,24 @@ def sub(a, b):
 
     return Number.to_number(a.value - b.value)
 
-def mul(a, b):
-    """Subtracts the second Number from the first Number."""
+def mul(a, b, *rest):
+    """Multiplies all the given numbers together."""
 
-    if not isinstance(a, Number):
-        raise WrongArgumentTypeError(a, Number)
-    elif not isinstance(b, Number):
-        raise WrongArgumentTypeError(b, Number)
+    # gather all the arguments into one list
+    nums = [a, b] + list(rest)
 
-    return Number.to_number(a.value * b.value)
+    # multiply all the arguments together while checking type
+    product = 1
+    for n in nums:
+        if not isinstance(n, Number):
+            raise WrongArgumentTypeError(n, Number)
+        product *= n.value
+
+        # stop multiplying if the product ever goes to zero
+        if product == 0:
+            break
+
+    return Number.to_number(product)
 
 def div(a, b):
     """Subtracts the second Number from the first Number."""

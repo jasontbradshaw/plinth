@@ -568,11 +568,6 @@ class Tokens:
     LENGTH = "length"
     INSERT = "insert"
 
-    # easy way to convert syntactic sugar to expanded forms
-    DESUGAR = {
-        QUOTE: QUOTE_LONG
-    }
-
     def __init__(self):
         raise NotImplementedError("Can't instantiate the '" +
                 self.__class__.__name__ + "' class!")
@@ -744,6 +739,10 @@ def parse(token_source):
     string_buf = []
     is_escaped = False
 
+    # we store the locations and indexes where we added quote tokens so we can
+    # quickly post-process them when done parsing.
+    quote_locations = []
+
     # iterate over every character in the source string
     for token in token_source:
 
@@ -789,6 +788,12 @@ def parse(token_source):
         elif Tokens.is_close_paren(token):
             dedent()
 
+        # save quote locations so we can process them later
+        elif Tokens.is_quote(token):
+            # we mark the stack and position of the quote for quick reference
+            quote_locations.append((stack[-1], len(stack[-1])))
+            add_token(token)
+
         # mark strings
         elif Tokens.is_string(token):
             # mark us as being in a string, let the first case deal with rest
@@ -806,6 +811,20 @@ def parse(token_source):
     # tokens list, and it never gets popped).
     if len(stack) > 1:
         raise CloseParenError()
+
+    # process all the quote marks into quote functions. we process right-to-left
+    # to allow for occurences of "''foo" and the like.
+    for scope, i in reversed(quote_locations):
+        # quotes must have something to consume
+        if i == len(scope) - 1:
+            raise ParserError("invalid quote location")
+
+        # have the quote mark consume the item to its right and replace the
+        # slots the two once filled with a new scope containing the quote
+        # function and its argument. we assign it as a list since slice
+        # replacement unwraps the iterable it's given, and we need our quote
+        # function to exist within its own iterable.
+        scope[i:i + 2] = [List(Symbol(Tokens.QUOTE_LONG), scope[i + 1])]
 
     # return the canonical abstract syntax tree
     return ast

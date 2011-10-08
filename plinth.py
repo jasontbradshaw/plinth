@@ -1007,7 +1007,7 @@ p(Tokens.FLOATP, floatp, "a")
 p(Tokens.FUNCTIONP, functionp, "a")
 
 # list
-p(Tokens.NTH, nth, "index", "list")
+p(Tokens.NTH, nth, "i", "list")
 p(Tokens.SLICE, slice_, "start", "end", "list")
 p(Tokens.LENGTH, length, "list")
 

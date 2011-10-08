@@ -956,7 +956,6 @@ def nth(i, lst):
     exists or the element isn't a list.
     """
 
-    # make sure we've got a list and an integer to work with
     if not isinstance(lst, List):
         raise WrongArgumentTypeError(lst, List)
     elif not isinstance(i, Integer):
@@ -967,11 +966,10 @@ def nth(i, lst):
 
 def slice_(start, end, lst):
     """
-    Returns a list containing the elements from start (inclusive) to end
+    Returns a new list containing the elements from start (inclusive) to end
     (exclusive) in the given list.
     """
 
-    # make sure we've got a list and integers to work with
     if not isinstance(lst, List):
         raise WrongArgumentTypeError(lst, List)
     elif not isinstance(start, Integer):
@@ -986,7 +984,6 @@ def length(lst):
     Returns the length of a list.
     """
 
-    # make sure we have a list
     if not isinstance(lst, List):
         raise WrongArgumentTypeError(lst, List)
 

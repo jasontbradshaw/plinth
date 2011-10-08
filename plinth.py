@@ -292,7 +292,9 @@ class Function(Atom):
         """
         Creates a function given a list of its argument symbols, its body, and
         its parent environment, i.e. the environment it was created and will be
-        evaluated in (its closure).
+        evaluated in (its closure). If the last argument is marked as variadic,
+        it gets stored away to allow for different processing when the function
+        is called with arguments.
         """
 
         assert isinstance(parent, Environment)
@@ -305,6 +307,12 @@ class Function(Atom):
         self.arg_symbols = arg_symbols
         self.body = body
         self.parent = parent
+
+        # create a normalized argument for a final vararg if there is one
+        self.vararg = None
+        if (len(self.arg_symbols) > 0 and
+                self.arg_symbols[-1].value.endswith(Tokens.VARARGS)):
+            self.vararg = Symbol(self.arg_symbols[-1].value[:-len(Tokens.VARARGS)])
 
     def __str__(self):
         return "<function (" + ' '.join(map(str, self.arg_symbols)) + ")>"
@@ -324,16 +332,34 @@ class Function(Atom):
         """
 
         # ensure that we've got the correct number of argument values
-        if len(self.arg_symbols) != len(arg_values):
-            raise IncorrectArgumentCountError(
-                    len(self.arg_symbols), len(arg_values))
+        if self.vararg is not None:
+            # we only check for the minimum number when variable
+            if len(arg_values) < len(self.arg_symbols) - 1:
+                raise IncorrectArgumentCountError(
+                        len(self.arg_symbols) - 1, len(arg_values))
+        else:
+            # we ensure direct correspondence when not variable
+            if len(arg_values) != len(self.arg_symbols):
+                raise IncorrectArgumentCountError(
+                        len(self.arg_symbols), len(arg_values))
 
-        # create a new environment with the parent set as our parent enviroment
+        # create a new environment with the parent set as our parent environment
         env = Environment(self.parent)
 
+        # map the vararg to an empty list by default, to ensure it has a value
+        if self.vararg is not None:
+            env[self.vararg] = List()
+
         # put the argument values into the new environment, mapping by position
-        for symbol, value in zip(self.arg_symbols, arg_values):
-            env[symbol] = value
+        for i, (symbol, value) in enumerate(zip(self.arg_symbols, arg_values)):
+            # see if we're on the last argument and we have a variadic arg
+            if self.vararg is not None and i == len(self.arg_symbols) - 1:
+                # map it into the environment with the remaining arg values
+                env[self.vararg] = List(*arg_values[i:])
+
+            # add the symbol normally otherwise
+            else:
+                env[symbol] = value
 
         # evaluate our body using the new environment and return the result
         return evaluate(self.body, env)
@@ -475,6 +501,7 @@ class Tokens:
     ESCAPE_CHAR = "\\"
     STRING = '"'
     COMMENT = ";"
+    VARARGS = "..."
 
     # special functions
     QUOTE_LONG = "quote"

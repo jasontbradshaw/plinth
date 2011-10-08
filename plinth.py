@@ -340,15 +340,15 @@ class Function(Atom):
         """
 
         # ensure that we've got the correct number of argument values
-        if self.vararg is not none:
+        if self.vararg is not None:
             # we only check for the minimum number when variable
             if len(arg_values) < len(self.arg_symbols) - 1:
-                raise incorrectargumentcounterror(
+                raise IncorrectArgumentCountError(
                         len(self.arg_symbols) - 1, len(arg_values))
         else:
             # we ensure direct correspondence when not variable
             if len(arg_values) != len(self.arg_symbols):
-                raise incorrectargumentcounterror(
+                raise IncorrectArgumentCountError(
                         len(self.arg_symbols), len(arg_values))
 
         # create a new environment with the parent set as our parent environment

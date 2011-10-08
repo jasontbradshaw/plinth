@@ -487,7 +487,6 @@ class Tokens:
     SUBTRACT = "-"
     MULTIPLY = "*"
     DIVIDE = "/"
-    EQUALS = "="
     POWER = "pow"
     SIN = "sin"
     COS = "cos"
@@ -496,6 +495,8 @@ class Tokens:
     ARCTAN2 = "atan2"
 
     # comparison
+    IS = "is?"
+    EQUAL = "="
     GREATER_THAN = ">"
     GREATER_THAN_OR_EQUAL = ">="
     LESS_THAN = "<"
@@ -873,6 +874,51 @@ def length(lst):
 
     return Integer(len(lst))
 
+def is_(a, b):
+    """
+    Returns true if the two items refer to the same object in memory.
+    """
+
+    return Boolean.to_boolean(a is b)
+
+def equal(a, b):
+    """
+    Returns true if two constructs are congruent. For example, numbers are
+    compared mathematically, lists are compared by structure and equivalent
+    contents, etc.
+    """
+
+    # numbers are compared mathematically, regardless of type
+    if isinstance(a, Number) and isinstance(b, Number):
+        return Boolean.to_boolean(a.value == b.value)
+
+    # things can't be equal if they're not the same class
+    elif not (isinstance(a, b.__class__) and isinstance(b, a.__class__)):
+        return BoolFalse()
+
+    # we know both args are of the same class now, no need to check both
+
+    # compare lists recursively
+    elif isinstance(a, List):
+        # must be of the same length
+        if len(a) != len(b):
+            return BoolFalse()
+
+        # compare all items in the list
+        for a_item, b_item in zip(a, b):
+            if not equal(a_item, b_item).value:
+                return BoolFalse()
+
+        # if we made it to here, we were equal!
+        return BoolTrue()
+
+    # functions can never be equal, there are too many things to check
+    elif isinstance(a, Function):
+        return BoolFalse()
+
+    # compare everything else by value (booleans, symbols, etc.)
+    return Boolean.to_boolean(a.value == b.value)
+
 def gt(a, b):
     """
     Compares two numbers using >.
@@ -941,6 +987,10 @@ p(Tokens.ADD, add, "a", "b")
 p(Tokens.SUBTRACT, sub, "a", "b")
 p(Tokens.MULTIPLY, mul, "a", "b")
 p(Tokens.DIVIDE, div, "a", "b")
+
+# comparison
+p(Tokens.IS, is_, "a", "b")
+p(Tokens.EQUAL, equal, "a", "b")
 p(Tokens.GREATER_THAN, gt, "a", "b")
 p(Tokens.GREATER_THAN_OR_EQUAL, gte, "a", "b")
 p(Tokens.LESS_THAN, lt, "a", "b")

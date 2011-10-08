@@ -1132,6 +1132,14 @@ def apply_(f, args):
 
     return f(*args)
 
+def not_(a):
+    """
+    Returns the opposite boolean of that passed in. All things that aren't #f
+    are #t, so we return the opposite of that.
+    """
+
+    return Boolean.to_boolean(isinstance(a, BoolFalse))
+
 # these functions serve as markers for whether the function being called is
 # special. we check to see if the function for the symbol is one of these
 # functions, and if so we evaluate it in whatever way it requires. this allows
@@ -1141,6 +1149,8 @@ quote = PrimitiveFunction(lambda e: None)
 lambda_ = PrimitiveFunction(lambda args, body: None)
 define = PrimitiveFunction(lambda symbol, value: None)
 if_ = PrimitiveFunction(lambda cond, success, failure: None)
+and_ = PrimitiveFunction(lambda a, b, *rest: None)
+or_ = PrimitiveFunction(lambda a, b, *rest: None)
 
 # the base environment for the interpreter
 global_env = Environment(None)
@@ -1150,11 +1160,16 @@ global_env[Symbol(Tokens.QUOTE_LONG)] = quote
 global_env[Symbol(Tokens.LAMBDA)] = lambda_
 global_env[Symbol(Tokens.DEFINE)] = define
 global_env[Symbol(Tokens.IF)] = if_
+global_env[Symbol(Tokens.AND)] = and_
+global_env[Symbol(Tokens.OR)] = or_
 
 # adds a new primitive function to the gloval environment
 add_prim = lambda t, f: global_env.__setitem__(Symbol(t), PrimitiveFunction(f))
 
 # self-contained functions that need no special assistance
+# logical
+add_prim(Tokens.NOT, not_)
+
 # math
 add_prim(Tokens.ADD, add)
 add_prim(Tokens.SUBTRACT, sub)
@@ -1277,6 +1292,35 @@ def evaluate(item, env=global_env):
             if isinstance(evaluate(cond), BoolFalse):
                 return evaluate(failure_clause)
             return evaluate(success_clause)
+
+        # logical and
+        elif function is and_:
+            if len(args) < 2:
+                raise IncorrectArgumentCountError(2, len(args))
+
+            # evaluate the arguments, returning the final one if none were #f,
+            # otherwise the last evaluated item, #f.
+            last_item = None
+            for item in args:
+                last_item = evaluate(item)
+                if isinstance(last_item, BoolFalse):
+                    break
+
+            return last_item
+
+        # logical or
+        elif function is or_:
+            if len(args) < 2:
+                raise IncorrectArgumentCountError(2, len(args))
+
+            # evaluate the arguments, returning the firt one that's not #f,
+            last_item = None
+            for item in args:
+                last_item = evaluate(item)
+                if not isinstance(last_item, BoolFalse):
+                    break
+
+            return last_item
 
         else:
             # evaluate the arguments normally before passing them to the

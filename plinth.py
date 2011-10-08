@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import re
+import math
 
 #
 # exceptions
@@ -33,6 +34,13 @@ class IncorrectArgumentCountError(Exception):
     def __init__(self, expected, actual):
         Exception.__init__(self, "expected " + str(expected) +
                 ", got " + str(actual))
+
+class WrongArgumentTypeError(Exception):
+    """Raised when an argument is of the wrong type."""
+    def __init__(self, arg, expected_class):
+        Exception.__init__(self, "wrong argument type for " + str(arg) +
+                ": expected " + expected_class.__name__.lower() + ", got " +
+                arg.__class__.__name__.lower())
 
 class ApplicationError(Exception):
     """Raised when a function could not be applied correctly."""
@@ -302,7 +310,7 @@ class Function(Atom):
         # all arguments must be symbols
         for item in arg_symbols:
             if not isinstance(item, Symbol):
-                raise TypeError("not a symbol: " + item)
+                raise WrongArgumentTypeError(item, Symbol)
 
         self.arg_symbols = arg_symbols
         self.body = body
@@ -798,32 +806,40 @@ def parse(token_source):
 def add(a, b):
     """Adds the first Number to the second and returns the result."""
 
-    if not (isinstance(a, Number) and isinstance(b, Number)):
-        raise TypeError("can only add numbers")
+    if not isinstance(a, Number):
+        raise WrongArgumentTypeError(a, Number)
+    elif not isinstance(b, Number):
+        raise WrongArgumentTypeError(b, Number)
 
     return Number.to_number(a.value + b.value)
 
 def sub(a, b):
     """Subtracts the second Number from the first Number."""
 
-    if not (isinstance(a, Number) and isinstance(b, Number)):
-        raise TypeError("can only substract numbers")
+    if not isinstance(a, Number):
+        raise WrongArgumentTypeError(a, Number)
+    elif not isinstance(b, Number):
+        raise WrongArgumentTypeError(b, Number)
 
     return Number.to_number(a.value - b.value)
 
 def mul(a, b):
     """Subtracts the second Number from the first Number."""
 
-    if not (isinstance(a, Number) and isinstance(b, Number)):
-        raise TypeError("can only multiply numbers")
+    if not isinstance(a, Number):
+        raise WrongArgumentTypeError(a, Number)
+    elif not isinstance(b, Number):
+        raise WrongArgumentTypeError(b, Number)
 
     return Number.to_number(a.value * b.value)
 
 def div(a, b):
     """Subtracts the second Number from the first Number."""
 
-    if not (isinstance(a, Number) and isinstance(b, Number)):
-        raise TypeError("can only divide numbers")
+    if not isinstance(a, Number):
+        raise WrongArgumentTypeError(a, Number)
+    elif not isinstance(b, Number):
+        raise WrongArgumentTypeError(b, Number)
 
     return Number.to_number(a.value / b.value)
 
@@ -867,7 +883,7 @@ def functionp(e):
 
     return Boolean.to_boolean(isinstance(e, Function))
 
-def nth(index, lst):
+def nth(i, lst):
     """
     Returns the nth element of a list, or raises an error if no such index
     exists or the element isn't a list.
@@ -875,9 +891,9 @@ def nth(index, lst):
 
     # make sure we've got a list and an integer to work with
     if not isinstance(lst, List):
-        raise TypeError("cannot index into non-list")
-    elif not isinstance(index, Integer):
-        raise TypeError("index must be an integer")
+        raise WrongArgumentTypeError(lst, List)
+    elif not isinstance(i, Integer):
+        raise WrongArgumentTypeError(i, Integer)
 
     # throws a nice index error by itself, we don't need to wrap it
     return lst[index.value]
@@ -890,11 +906,11 @@ def slice_(start, end, lst):
 
     # make sure we've got a list and integers to work with
     if not isinstance(lst, List):
-        raise TypeError("cannot index into non-list")
+        raise WrongArgumentTypeError(lst, List)
     elif not isinstance(start, Integer):
-        raise TypeError("start must be an integer")
+        raise WrongArgumentTypeError(start, Integer)
     elif not isinstance(end, Integer):
-        raise TypeError("end must be an integer")
+        raise WrongArgumentTypeError(end, Integer)
 
     return lst[start.value:end.value]
 
@@ -905,7 +921,7 @@ def length(lst):
 
     # make sure we have a list
     if not isinstance(lst, List):
-        raise TypeError("cannot get length of non-list")
+        raise WrongArgumentTypeError(lst, List)
 
     return Integer(len(lst))
 
@@ -959,8 +975,10 @@ def gt(a, b):
     Compares two numbers using >.
     """
 
-    if not isinstance(a, Number) or not isinstance(b, Number):
-        raise TypeError("can only compare numbers")
+    if not isinstance(a, Number):
+        raise WrongArgumentTypeError(a, Number)
+    elif not isinstance(b, Number):
+        raise WrongArgumentTypeError(b, Number)
 
     return Boolean.to_boolean(a.value > b.value)
 
@@ -969,8 +987,10 @@ def gte(a, b):
     Compares two numbers using >=.
     """
 
-    if not isinstance(a, Number) or not isinstance(b, Number):
-        raise TypeError("can only compare numbers")
+    if not isinstance(a, Number):
+        raise WrongArgumentTypeError(a, Number)
+    elif not isinstance(b, Number):
+        raise WrongArgumentTypeError(b, Number)
 
     return Boolean.to_boolean(a.value >= b.value)
 
@@ -979,8 +999,10 @@ def lt(a, b):
     Compares two numbers using <.
     """
 
-    if not isinstance(a, Number) or not isinstance(b, Number):
-        raise TypeError("can only compare numbers")
+    if not isinstance(a, Number):
+        raise WrongArgumentTypeError(a, Number)
+    elif not isinstance(b, Number):
+        raise WrongArgumentTypeError(b, Number)
 
     return Boolean.to_boolean(a.value < b.value)
 
@@ -989,8 +1011,10 @@ def lte(a, b):
     Compares two numbers using <=.
     """
 
-    if not isinstance(a, Number) or not isinstance(b, Number):
-        raise TypeError("can only compare numbers")
+    if not isinstance(a, Number):
+        raise WrongArgumentTypeError(a, Number)
+    elif not isinstance(b, Number):
+        raise WrongArgumentTypeError(b, Number)
 
     return Boolean.to_boolean(a.value <= b.value)
 
@@ -1000,9 +1024,9 @@ def apply_(f, args):
     """
 
     if not isinstance(f, Function):
-        raise TypeError("wrong type to apply: " + str(f))
+        raise WrongArgumentTypeError(f, Function)
     elif not isinstance(args, List):
-        raise TypeError("wrong type for arguments: " + str(args))
+        raise WrongArgumentTypeError(args, List)
 
     return f(*args)
 
@@ -1121,7 +1145,7 @@ def evaluate(item, env=global_env):
 
             # make sure we're defining to a symbol
             if not isinstance(symbol, Symbol):
-                raise TypeError("not a symbol: " + str(symbol))
+                raise WrongArgumentTypeError(symbol, Symbol)
 
             # evaluate the argument, map the symbol to the result in the current
             # environment, then return the evaluated value. this allows for

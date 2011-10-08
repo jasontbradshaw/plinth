@@ -311,8 +311,8 @@ class Function(Atom):
         # create a normalized argument for a final vararg if there is one
         self.vararg = None
         if (len(self.arg_symbols) > 0 and
-                self.arg_symbols[-1].value.endswith(Tokens.VARARGS)):
-            self.vararg = Symbol(self.arg_symbols[-1].value[:-len(Tokens.VARARGS)])
+                self.arg_symbols[-1].value.endswith(Tokens.VARARG)):
+            self.vararg = Symbol(self.arg_symbols[-1].value[:-len(Tokens.VARARG)])
 
     def __str__(self):
         return "<function (" + ' '.join(map(str, self.arg_symbols)) + ")>"
@@ -501,7 +501,7 @@ class Tokens:
     ESCAPE_CHAR = "\\"
     STRING = '"'
     COMMENT = ";"
-    VARARGS = "..."
+    VARARG = "..."
 
     # special functions
     QUOTE_LONG = "quote"

@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 
-import re
 import math
 
 #
@@ -340,15 +339,15 @@ class Function(Atom):
         """
 
         # ensure that we've got the correct number of argument values
-        if self.vararg is not None:
+        if self.vararg is not none:
             # we only check for the minimum number when variable
             if len(arg_values) < len(self.arg_symbols) - 1:
-                raise IncorrectArgumentCountError(
+                raise incorrectargumentcounterror(
                         len(self.arg_symbols) - 1, len(arg_values))
         else:
             # we ensure direct correspondence when not variable
             if len(arg_values) != len(self.arg_symbols):
-                raise IncorrectArgumentCountError(
+                raise incorrectargumentcounterror(
                         len(self.arg_symbols), len(arg_values))
 
         # create a new environment with the parent set as our parent environment
@@ -378,20 +377,21 @@ class PrimitiveFunction(Function):
     of the constructs that enables the language to function.
     """
 
-    # used to parse the actual and expected number of arguments from the error a
-    # function raises when an incorrect number of arguments is given.
-    ARGUMENT_REGEX = re.compile("^.* exactly (\d+) arguments? \((\d+) given\)$")
-
-    def __init__(self, method, *arg_names):
+    def __init__(self, method):
         """
         Create a primitive function that works much like a normal function,
         except that the method is a Python function that does work using the
-        arguments given to __call__. Also takes a list of argument names to be
-        used when printing the function to the console.
+        arguments given to __call__.
         """
 
         self.method = method
-        self.arg_names = arg_names
+        self.arg_names = list(method.func_code.co_varnames)
+        self.arg_count = method.func_code.co_argcount
+
+        # if the arg count is shorter than the names, the last is variadic
+        if self.arg_count < len(self.arg_names):
+            # make it display like a custom variadic argument
+            self.arg_names[-1] = self.arg_names[-1] + Tokens.VARARG
 
     def __str__(self):
         return "<primitive-function (" + ' '.join(self.arg_names) + ")>"
@@ -401,26 +401,24 @@ class PrimitiveFunction(Function):
                 ", ".join(map(repr, self.arg_names)) + ")")
 
     def __call__(self, *arg_values):
-        # attempt to return the method applied to the given arguments
-        try:
-            return self.method(*arg_values)
+        """
+        Calls our internal method on the given arguments, ensuring that the
+        correct number of values was passed in.
+        """
 
-        # if we had the wrong number of arguments, parse the numbers out and
-        # raise them in an exception.
-        except TypeError, te:
-            # try to match the text for the argument error
-            match = PrimitiveFunction.ARGUMENT_REGEX.match(te.message)
+        # ensure that we've got the correct number of argument values
+        if self.arg_count < len(self.arg_names):
+            # we only check for the minimum number when variable
+            if len(arg_values) < self.arg_count:
+                raise incorrectargumentcounterror(
+                        self.arg_count, len(arg_values))
+        else:
+            # we ensure direct correspondence when not variable
+            if len(arg_values) != self.arg_count:
+                raise incorrectargumentcounterror(
+                        self.arg_count, len(arg_values))
 
-            if match is not None:
-                # get actual and expected arg counts (group 0 is entire match)
-                expected = match.group(1)
-                actual = match.group(2)
-
-                # raise the error with the parsed argument counts
-                raise IncorrectArgumentCountError(expected, actual)
-
-            # raise the original exception if it didn't match the regex
-            raise te
+        return self.method(*arg_values)
 
 class Environment:
     """
@@ -1035,10 +1033,10 @@ def apply_(f, args):
 # functions, and if so we evaluate it in whatever way it requires. this allows
 # the user to define new symbols that point to these functions, but still have
 # the functions work in the same way.
-quote = PrimitiveFunction(None, "e")
-lambda_ = PrimitiveFunction(None, "args", "body")
-define = PrimitiveFunction(None, "symbol", "value")
-if_ = PrimitiveFunction(None, "cond", "success", "failure")
+quote = PrimitiveFunction(lambda e: None)
+lambda_ = PrimitiveFunction(lambda args, body: None)
+define = PrimitiveFunction(lambda symbol, value: None)
+if_ = PrimitiveFunction(lambda cond, success, failure: None)
 
 # the base environment for the interpreter
 global_env = Environment(None)
@@ -1050,40 +1048,40 @@ global_env[Symbol(Tokens.DEFINE)] = define
 global_env[Symbol(Tokens.IF)] = if_
 
 # adds a new primitive function to the gloval environment
-p = lambda t, f, *a: global_env.__setitem__(Symbol(t), PrimitiveFunction(f, *a))
+p = lambda t, f: global_env.__setitem__(Symbol(t), PrimitiveFunction(f))
 
 # self-contained functions that need no special assistance
 # math
-p(Tokens.ADD, add, "a", "b")
-p(Tokens.SUBTRACT, sub, "a", "b")
-p(Tokens.MULTIPLY, mul, "a", "b")
-p(Tokens.DIVIDE, div, "a", "b")
+p(Tokens.ADD, add)
+p(Tokens.SUBTRACT, sub)
+p(Tokens.MULTIPLY, mul)
+p(Tokens.DIVIDE, div)
 
 # functional programming
-p(Tokens.APPLY, apply_, "f", "args")
+p(Tokens.APPLY, apply_)
 
 # comparison
-p(Tokens.IS, is_, "a", "b")
-p(Tokens.EQUAL, equal, "a", "b")
-p(Tokens.GREATER_THAN, gt, "a", "b")
-p(Tokens.GREATER_THAN_OR_EQUAL, gte, "a", "b")
-p(Tokens.LESS_THAN, lt, "a", "b")
-p(Tokens.LESS_THAN_OR_EQUAL, lte, "a", "b")
+p(Tokens.IS, is_)
+p(Tokens.EQUAL, equal)
+p(Tokens.GREATER_THAN, gt)
+p(Tokens.GREATER_THAN_OR_EQUAL, gte)
+p(Tokens.LESS_THAN, lt)
+p(Tokens.LESS_THAN_OR_EQUAL, lte)
 
 # types
-p(Tokens.BOOLEANP, booleanp, "a")
-p(Tokens.LISTP, listp, "a")
-p(Tokens.SYMBOLP, symbolp, "a")
-p(Tokens.STRINGP, stringp, "a")
-p(Tokens.NUMBERP, numberp, "a")
-p(Tokens.INTEGERP, integerp, "a")
-p(Tokens.FLOATP, floatp, "a")
-p(Tokens.FUNCTIONP, functionp, "a")
+p(Tokens.BOOLEANP, booleanp)
+p(Tokens.LISTP, listp)
+p(Tokens.SYMBOLP, symbolp)
+p(Tokens.STRINGP, stringp)
+p(Tokens.NUMBERP, numberp)
+p(Tokens.INTEGERP, integerp)
+p(Tokens.FLOATP, floatp)
+p(Tokens.FUNCTIONP, functionp)
 
 # list
-p(Tokens.NTH, nth, "i", "list")
-p(Tokens.SLICE, slice_, "start", "end", "list")
-p(Tokens.LENGTH, length, "list")
+p(Tokens.NTH, nth)
+p(Tokens.SLICE, slice_)
+p(Tokens.LENGTH, length)
 
 def evaluate(item, env=global_env):
     """

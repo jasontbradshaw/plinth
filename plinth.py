@@ -1048,40 +1048,40 @@ global_env[Symbol(Tokens.DEFINE)] = define
 global_env[Symbol(Tokens.IF)] = if_
 
 # adds a new primitive function to the gloval environment
-p = lambda t, f: global_env.__setitem__(Symbol(t), PrimitiveFunction(f))
+add_prim = lambda t, f: global_env.__setitem__(Symbol(t), PrimitiveFunction(f))
 
 # self-contained functions that need no special assistance
 # math
-p(Tokens.ADD, add)
-p(Tokens.SUBTRACT, sub)
-p(Tokens.MULTIPLY, mul)
-p(Tokens.DIVIDE, div)
+add_prim(Tokens.ADD, add)
+add_prim(Tokens.SUBTRACT, sub)
+add_prim(Tokens.MULTIPLY, mul)
+add_prim(Tokens.DIVIDE, div)
 
 # functional programming
-p(Tokens.APPLY, apply_)
+add_prim(Tokens.APPLY, apply_)
 
 # comparison
-p(Tokens.IS, is_)
-p(Tokens.EQUAL, equal)
-p(Tokens.GREATER_THAN, gt)
-p(Tokens.GREATER_THAN_OR_EQUAL, gte)
-p(Tokens.LESS_THAN, lt)
-p(Tokens.LESS_THAN_OR_EQUAL, lte)
+add_prim(Tokens.IS, is_)
+add_prim(Tokens.EQUAL, equal)
+add_prim(Tokens.GREATER_THAN, gt)
+add_prim(Tokens.GREATER_THAN_OR_EQUAL, gte)
+add_prim(Tokens.LESS_THAN, lt)
+add_prim(Tokens.LESS_THAN_OR_EQUAL, lte)
 
 # types
-p(Tokens.BOOLEANP, booleanp)
-p(Tokens.LISTP, listp)
-p(Tokens.SYMBOLP, symbolp)
-p(Tokens.STRINGP, stringp)
-p(Tokens.NUMBERP, numberp)
-p(Tokens.INTEGERP, integerp)
-p(Tokens.FLOATP, floatp)
-p(Tokens.FUNCTIONP, functionp)
+add_prim(Tokens.BOOLEANP, booleanp)
+add_prim(Tokens.LISTP, listp)
+add_prim(Tokens.SYMBOLP, symbolp)
+add_prim(Tokens.STRINGP, stringp)
+add_prim(Tokens.NUMBERP, numberp)
+add_prim(Tokens.INTEGERP, integerp)
+add_prim(Tokens.FLOATP, floatp)
+add_prim(Tokens.FUNCTIONP, functionp)
 
 # list
-p(Tokens.NTH, nth)
-p(Tokens.SLICE, slice_)
-p(Tokens.LENGTH, length)
+add_prim(Tokens.NTH, nth)
+add_prim(Tokens.SLICE, slice_)
+add_prim(Tokens.LENGTH, length)
 
 def evaluate(item, env=global_env):
     """

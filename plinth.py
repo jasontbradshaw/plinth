@@ -798,28 +798,32 @@ def parse(token_source):
 def add(a, b):
     """Adds the first Number to the second and returns the result."""
 
-    assert isinstance(a, Number) and isinstance(b, Number)
+    if not (isinstance(a, Number) and isinstance(b, Number)):
+        raise TypeError("can only add numbers")
 
     return Number.to_number(a.value + b.value)
 
 def sub(a, b):
     """Subtracts the second Number from the first Number."""
 
-    assert isinstance(a, Number) and isinstance(b, Number)
+    if not (isinstance(a, Number) and isinstance(b, Number)):
+        raise TypeError("can only substract numbers")
 
     return Number.to_number(a.value - b.value)
 
 def mul(a, b):
     """Subtracts the second Number from the first Number."""
 
-    assert isinstance(a, Number) and isinstance(b, Number)
+    if not (isinstance(a, Number) and isinstance(b, Number)):
+        raise TypeError("can only multiply numbers")
 
     return Number.to_number(a.value * b.value)
 
 def div(a, b):
     """Subtracts the second Number from the first Number."""
 
-    assert isinstance(a, Number) and isinstance(b, Number)
+    if not (isinstance(a, Number) and isinstance(b, Number)):
+        raise TypeError("can only divide numbers")
 
     return Number.to_number(a.value / b.value)
 

@@ -146,6 +146,9 @@ class List:
 
         self.items.pop(index)
 
+    def insert(self, index, item):
+        self.items.insert(index, item)
+
 class Number(Atom):
     """
     Numbers can be added, subtracted, etc. and hold a single value.
@@ -563,6 +566,7 @@ class Tokens:
     NTH = "nth"
     SLICE = "slice"
     LENGTH = "length"
+    INSERT = "insert"
 
     # easy way to convert syntactic sugar to expanded forms
     DESUGAR = {
@@ -989,6 +993,21 @@ def length(lst):
 
     return Integer(len(lst))
 
+def insert(i, item, lst):
+    """
+    Insert an item before the given position in the given list and return a new
+    list with the item inserted at the specified position.
+    """
+
+    if not isinstance(i, Integer):
+        raise WrongArgumentTypeError(i, Integer)
+    elif not isinstance(lst, List):
+        raise WrongArgumentTypeError(lst, List)
+
+    new_list = lst[:]
+    new_list.insert(i.value, item)
+    return new_list
+
 def is_(a, b):
     """
     Returns true if the two items refer to the same object in memory.
@@ -1154,6 +1173,7 @@ add_prim(Tokens.FUNCTIONP, functionp)
 add_prim(Tokens.NTH, nth)
 add_prim(Tokens.SLICE, slice_)
 add_prim(Tokens.LENGTH, length)
+add_prim(Tokens.INSERT, insert)
 
 def evaluate(item, env=global_env):
     """

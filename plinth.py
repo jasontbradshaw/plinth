@@ -487,6 +487,24 @@ class Tokens:
     SUBTRACT = "-"
     MULTIPLY = "*"
     DIVIDE = "/"
+    EQUALS = "="
+    POWER = "pow"
+    SIN = "sin"
+    COS = "cos"
+    TAN = "tan"
+    ARCTAN = "atan"
+    ARCTAN2 = "atan2"
+
+    # comparison
+    GREATER_THAN = ">"
+    GREATER_THAN_OR_EQUAL = ">="
+    LESS_THAN = "<"
+    LESS_THAN_OR_EQUAL = "<="
+
+    # logic
+    AND = "and"
+    OR = "or"
+    NOT = "not"
 
     # type predicates
     BOOLEANP = "boolean?"
@@ -855,6 +873,46 @@ def length(lst):
 
     return Integer(len(lst))
 
+def gt(a, b):
+    """
+    Compares two numbers using >.
+    """
+
+    if not isinstance(a, Number) or not isinstance(b, Number):
+        raise TypeError("can only compare numbers")
+
+    return Boolean.to_boolean(a.value > b.value)
+
+def gte(a, b):
+    """
+    Compares two numbers using >=.
+    """
+
+    if not isinstance(a, Number) or not isinstance(b, Number):
+        raise TypeError("can only compare numbers")
+
+    return Boolean.to_boolean(a.value >= b.value)
+
+def lt(a, b):
+    """
+    Compares two numbers using <.
+    """
+
+    if not isinstance(a, Number) or not isinstance(b, Number):
+        raise TypeError("can only compare numbers")
+
+    return Boolean.to_boolean(a.value < b.value)
+
+def lte(a, b):
+    """
+    Compares two numbers using <=.
+    """
+
+    if not isinstance(a, Number) or not isinstance(b, Number):
+        raise TypeError("can only compare numbers")
+
+    return Boolean.to_boolean(a.value <= b.value)
+
 # these functions serve as markers for whether the function being called is
 # special. we check to see if the function for the symbol is one of these
 # functions, and if so we evaluate it in whatever way it requires. this allows
@@ -874,27 +932,34 @@ global_env[Symbol(Tokens.LAMBDA)] = lambda_
 global_env[Symbol(Tokens.DEFINE)] = define
 global_env[Symbol(Tokens.IF)] = if_
 
+# adds a new primitive function to the gloval environment
+p = lambda t, f, *a: global_env.__setitem__(Symbol(t), PrimitiveFunction(f, *a))
+
 # self-contained functions that need no special assistance
 # math
-global_env[Symbol(Tokens.ADD)] = PrimitiveFunction(add, "a", "b")
-global_env[Symbol(Tokens.SUBTRACT)] = PrimitiveFunction(sub, "a", "b")
-global_env[Symbol(Tokens.MULTIPLY)] = PrimitiveFunction(mul, "a", "b")
-global_env[Symbol(Tokens.DIVIDE)] = PrimitiveFunction(div, "a", "b")
+p(Tokens.ADD, add, "a", "b")
+p(Tokens.SUBTRACT, sub, "a", "b")
+p(Tokens.MULTIPLY, mul, "a", "b")
+p(Tokens.DIVIDE, div, "a", "b")
+p(Tokens.GREATER_THAN, gt, "a", "b")
+p(Tokens.GREATER_THAN_OR_EQUAL, gte, "a", "b")
+p(Tokens.LESS_THAN, lt, "a", "b")
+p(Tokens.LESS_THAN_OR_EQUAL, lte, "a", "b")
 
 # types
-global_env[Symbol(Tokens.BOOLEANP)] = PrimitiveFunction(booleanp, "a")
-global_env[Symbol(Tokens.LISTP)] = PrimitiveFunction(listp, "a")
-global_env[Symbol(Tokens.SYMBOLP)] = PrimitiveFunction(symbolp, "a")
-global_env[Symbol(Tokens.STRINGP)] = PrimitiveFunction(stringp, "a")
-global_env[Symbol(Tokens.NUMBERP)] = PrimitiveFunction(numberp, "a")
-global_env[Symbol(Tokens.INTEGERP)] = PrimitiveFunction(integerp, "a")
-global_env[Symbol(Tokens.FLOATP)] = PrimitiveFunction(floatp, "a")
-global_env[Symbol(Tokens.FUNCTIONP)] = PrimitiveFunction(functionp, "a")
+p(Tokens.BOOLEANP, booleanp, "a")
+p(Tokens.LISTP, listp, "a")
+p(Tokens.SYMBOLP, symbolp, "a")
+p(Tokens.STRINGP, stringp, "a")
+p(Tokens.NUMBERP, numberp, "a")
+p(Tokens.INTEGERP, integerp, "a")
+p(Tokens.FLOATP, floatp, "a")
+p(Tokens.FUNCTIONP, functionp, "a")
 
 # list
-global_env[Symbol(Tokens.NTH)] = PrimitiveFunction(nth, "index", "list")
-global_env[Symbol(Tokens.SLICE)] = PrimitiveFunction(slice_, "start", "end", "list")
-global_env[Symbol(Tokens.LENGTH)] = PrimitiveFunction(length, "list")
+p(Tokens.NTH, nth, "index", "list")
+p(Tokens.SLICE, slice_, "start", "end", "list")
+p(Tokens.LENGTH, length, "list")
 
 def evaluate(item, env=global_env):
     """

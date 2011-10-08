@@ -302,7 +302,7 @@ class Function(Atom):
             if not isinstance(item, Symbol):
                 raise TypeError("not a symbol: " + item)
 
-        self.arg_symbols = tuple(arg_symbols)
+        self.arg_symbols = arg_symbols
         self.body = body
         self.parent = parent
 

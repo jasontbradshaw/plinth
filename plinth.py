@@ -963,7 +963,7 @@ def nth(i, lst):
         raise WrongArgumentTypeError(i, Integer)
 
     # throws a nice index error by itself, we don't need to wrap it
-    return lst[index.value]
+    return lst[i.value]
 
 def slice_(start, end, lst):
     """

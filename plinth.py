@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import math
+import inspect
 
 #
 # exceptions
@@ -385,13 +386,17 @@ class PrimitiveFunction(Function):
         """
 
         self.method = method
-        self.arg_names = list(method.func_code.co_varnames)
-        self.arg_count = method.func_code.co_argcount
 
-        # if the arg count is shorter than the names, the last is variadic
-        if self.arg_count < len(self.arg_names):
-            # make it display like a custom variadic argument
-            self.arg_names[-1] = self.arg_names[-1] + Tokens.VARARG
+        # get our arguments with any variadic args
+        args, vararg, _, _, = inspect.getargspec(method)
+
+        # set the variadic argument (None if there wasn't one, else the arg)
+        self.vararg = vararg
+
+        # add the args and the only variadic arg (if there is one)
+        self.arg_names = args
+        if vararg is not None:
+            self.arg_names.append(vararg + Tokens.VARARG)
 
     def __str__(self):
         return "<primitive-function (" + ' '.join(self.arg_names) + ")>"
@@ -407,15 +412,15 @@ class PrimitiveFunction(Function):
         """
 
         # ensure that we've got the correct number of argument values
-        if self.arg_count < len(self.arg_names):
+        if self.vararg is not None:
             # we only check for the minimum number when variable
-            if len(arg_values) < self.arg_count:
-                raise incorrectargumentcounterror(
-                        self.arg_count, len(arg_values))
+            if len(arg_values) < len(self.arg_names) - 1:
+                raise IncorrectArgumentCountError(
+                        len(self.arg_count) - 1, len(arg_values))
         else:
             # we ensure direct correspondence when not variable
-            if len(arg_values) != self.arg_count:
-                raise incorrectargumentcounterror(
+            if len(arg_values) != len(self.arg_names):
+                raise IncorrectArgumentCountError(
                         self.arg_count, len(arg_values))
 
         return self.method(*arg_values)

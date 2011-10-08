@@ -850,6 +850,56 @@ def mul(a, b, *rest):
 
     return Number.to_number(product)
 
+def power(a, b):
+    """Raises a to the power of b."""
+
+    if not isinstance(a, Number):
+        raise WrongArgumentTypeError(a, Number)
+    elif not isinstance(b, Number):
+        raise WrongArgumentTypeError(b, Number)
+
+    return Number.to_number(a.value ** b.value)
+
+def sin(a):
+    """Takes the sin of a."""
+
+    if not isinstance(a, Number):
+        raise WrongArgumentTypeError(a, Number)
+
+    return Number.to_number(math.sin(a.value))
+
+def cos(a):
+    """Takes the cosine of a."""
+
+    if not isinstance(a, Number):
+        raise WrongArgumentTypeError(a, Number)
+
+    return Number.to_number(math.cos(a.value))
+
+def tan(a):
+    """Takes the tangent of a."""
+
+    if not isinstance(a, Number):
+        raise WrongArgumentTypeError(a, Number)
+
+    return Number.to_number(math.tan(a.value))
+
+def atan(a):
+    """Takes the arctangent of a."""
+
+    if not isinstance(a, Number):
+        raise WrongArgumentTypeError(a, Number)
+
+    return Number.to_number(math.atan(a.value))
+
+def atan2(a):
+    """Takes the second arctangent of a."""
+
+    if not isinstance(a, Number):
+        raise WrongArgumentTypeError(a, Number)
+
+    return Number.to_number(math.atan2(a.value))
+
 def div(a, b):
     """Subtracts the second Number from the first Number."""
 
@@ -1075,6 +1125,12 @@ add_prim(Tokens.ADD, add)
 add_prim(Tokens.SUBTRACT, sub)
 add_prim(Tokens.MULTIPLY, mul)
 add_prim(Tokens.DIVIDE, div)
+add_prim(Tokens.POWER, power)
+add_prim(Tokens.SIN, sin)
+add_prim(Tokens.COS, cos)
+add_prim(Tokens.TAN, tan)
+add_prim(Tokens.ARCTAN, atan)
+add_prim(Tokens.ARCTAN2, atan2)
 
 # functional programming
 add_prim(Tokens.APPLY, apply_)

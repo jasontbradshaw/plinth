@@ -511,6 +511,8 @@ class Tokens:
     OPEN_PAREN = "("
     CLOSE_PAREN = ")"
     QUOTE = "'"
+    QUASIQUOTE = "`"
+    UNQUOTE = ","
     WHITESPACE = frozenset([" ", "\t", "\n", "\r", "\f", "\v"])
     ESCAPE_CHAR = "\\"
     STRING = '"'
@@ -519,6 +521,8 @@ class Tokens:
 
     # special functions
     QUOTE_LONG = "quote"
+    QUASIQUOTE_LONG = "quasiquote"
+    UNQUOTE_LONG = "unquote"
     LAMBDA = "lambda"
     DEFINE = "define"
     IF = "if"
@@ -568,6 +572,13 @@ class Tokens:
     LENGTH = "length"
     INSERT = "insert"
 
+    # used to de-sugar various syntactic elements
+    DESUGAR = {
+        QUOTE: QUOTE_LONG,
+        UNQUOTE: UNQUOTE_LONG,
+        QUASIQUOTE: QUASIQUOTE_LONG
+    }
+
     def __init__(self):
         raise NotImplementedError("Can't instantiate the '" +
                 self.__class__.__name__ + "' class!")
@@ -583,6 +594,14 @@ class Tokens:
     @staticmethod
     def is_quote(token):
         return token == Tokens.QUOTE
+
+    @staticmethod
+    def is_unquote(token):
+        return token == Tokens.UNQUOTE
+
+    @staticmethod
+    def is_quasiquote(token):
+        return token == Tokens.QUASIQUOTE
 
     @staticmethod
     def is_whitespace(token):
@@ -667,8 +686,8 @@ class Tokens:
                     yield flush()
                 yield c
 
-            # quotes
-            elif Tokens.is_quote(c):
+            # quotes, unquotes, and quasiquotes
+            elif c in Tokens.DESUGAR:
                 if len(buf) > 0:
                     yield flush()
                 yield c
@@ -739,9 +758,9 @@ def parse(token_source):
     string_buf = []
     is_escaped = False
 
-    # we store the locations and indexes where we added quote tokens so we can
+    # we store the locations and indexes where we added sugary tokens so we can
     # quickly post-process them when done parsing.
-    quote_locations = []
+    sugar_locations = []
 
     # iterate over every character in the source string
     for token in token_source:
@@ -788,10 +807,10 @@ def parse(token_source):
         elif Tokens.is_close_paren(token):
             dedent()
 
-        # save quote locations so we can process them later
-        elif Tokens.is_quote(token):
-            # we mark the stack and position of the quote for quick reference
-            quote_locations.append((stack[-1], len(stack[-1])))
+        # quote, unquote, quasiquote (the only sugar in our language)
+        elif token in Tokens.DESUGAR:
+            # we mark the stack and position of the token for quick reference
+            sugar_locations.append((stack[-1], len(stack[-1])))
             add_token(token)
 
         # mark strings
@@ -814,17 +833,18 @@ def parse(token_source):
 
     # process all the quote marks into quote functions. we process right-to-left
     # to allow for occurences of "''foo" and the like.
-    for scope, i in reversed(quote_locations):
+    for scope, i in reversed(sugar_locations):
         # quotes must have something to consume
         if i == len(scope) - 1:
-            raise ParserError("invalid quote location")
+            raise ParserError("invalid quote syntax")
 
-        # have the quote mark consume the item to its right and replace the
-        # slots the two once filled with a new scope containing the quote
+        # have the sugar mark consume the item to its right and replace the
+        # slots the two once filled with a new scope containing the desugared
         # function and its argument. we assign it as a list since slice
-        # replacement unwraps the iterable it's given, and we need our quote
-        # function to exist within its own iterable.
-        scope[i:i + 2] = [List(Symbol(Tokens.QUOTE_LONG), scope[i + 1])]
+        # replacement unwraps the iterable it's given, and we need our desugared
+        # function to exist within its own List.
+        new_symbol = Symbol(Tokens.DESUGAR[scope[i].value])
+        scope[i:i + 2] = [List(new_symbol, scope[i + 1])]
 
     # return the canonical abstract syntax tree
     return ast

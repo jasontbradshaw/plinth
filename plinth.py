@@ -1256,7 +1256,7 @@ def evaluate(item, env=global_env):
             raise ApplicationError("nothing to apply")
 
         # evaluate functions using their arguments
-        function = evaluate(item[0])
+        function = evaluate(item[0], env)
         args = item[1:]
 
         # make sure our first item evaluated to a function
@@ -1305,7 +1305,7 @@ def evaluate(item, env=global_env):
             # environment, then return the evaluated value. this allows for
             # chains of definitions, or simultaneous variable assignments to the
             # same value.
-            result = evaluate(value)
+            result = evaluate(value, env)
             env[symbol] = result
             return result
 
@@ -1319,9 +1319,9 @@ def evaluate(item, env=global_env):
             failure_clause = args[2]
 
             # every value is considered #t except for #f
-            if isinstance(evaluate(cond), BoolFalse):
-                return evaluate(failure_clause)
-            return evaluate(success_clause)
+            if isinstance(evaluate(cond, env), BoolFalse):
+                return evaluate(failure_clause, env)
+            return evaluate(success_clause, env)
 
         # logical and
         elif function is and_:
@@ -1332,7 +1332,7 @@ def evaluate(item, env=global_env):
             # otherwise the last evaluated item, #f.
             last_item = None
             for item in args:
-                last_item = evaluate(item)
+                last_item = evaluate(item, env)
                 if isinstance(last_item, BoolFalse):
                     break
 
@@ -1346,7 +1346,7 @@ def evaluate(item, env=global_env):
             # evaluate the arguments, returning the firt one that's not #f,
             last_item = None
             for item in args:
-                last_item = evaluate(item)
+                last_item = evaluate(item, env)
                 if not isinstance(last_item, BoolFalse):
                     break
 

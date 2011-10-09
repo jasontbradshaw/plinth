@@ -1167,6 +1167,8 @@ def not_(a):
 # the user to define new symbols that point to these functions, but still have
 # the functions work in the same way.
 quote = PrimitiveFunction(lambda e: None)
+unquote = PrimitiveFunction(lambda e: None)
+quasiquote = PrimitiveFunction(lambda e: None)
 lambda_ = PrimitiveFunction(lambda args, body: None)
 define = PrimitiveFunction(lambda symbol, value: None)
 if_ = PrimitiveFunction(lambda cond, success, failure: None)
@@ -1268,7 +1270,7 @@ def evaluate(item, env=global_env):
             if len(args) != 1:
                 raise IncorrectArgumentCountError(1, len(args))
 
-            # return the argument to quote unevaluated
+            # return the argument unevaluated
             return args[0]
 
         # list

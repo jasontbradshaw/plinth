@@ -519,6 +519,11 @@ class Tokens:
     COMMENT = ";"
     VARARG = "..."
 
+    # repl
+    READ = "read"
+    EVAL = "eval"
+    PRINT = "print"
+
     # special functions
     QUOTE_LONG = "quote"
     QUASIQUOTE_LONG = "quasiquote"
@@ -719,7 +724,7 @@ def parse(token_source):
     """
 
     # where the abstract syntax tree is held
-    ast = []
+    ast = List()
 
     # stack where the active scope is kept. starts with the ast as the initial
     # active scope where tokens are added.
@@ -1161,6 +1166,23 @@ def not_(a):
 
     return Boolean.to_boolean(isinstance(a, BoolFalse))
 
+def read(s):
+    """
+    Reads a string and returns a list of the S-expressions contained therein.
+    """
+
+    if not isinstance(s, String):
+        raise WrongArgumentTypeError(s, String)
+
+    return parse(s.value)
+
+def eval_(sexp):
+    """
+    Evaluates an S-expression in the global environment and returns the result.
+    """
+
+    return evaluate(sexp, global_env)
+
 # these functions serve as markers for whether the function being called is
 # special. we check to see if the function for the symbol is one of these
 # functions, and if so we evaluate it in whatever way it requires. this allows
@@ -1191,7 +1213,10 @@ global_env[Symbol(Tokens.LIST)] = list_
 # adds a new primitive function to the gloval environment
 add_prim = lambda t, f: global_env.__setitem__(Symbol(t), PrimitiveFunction(f))
 
-# self-contained functions that need no special assistance
+# repl
+add_prim(Tokens.READ, read)
+add_prim(Tokens.EVAL, eval_)
+
 # logical
 add_prim(Tokens.NOT, not_)
 

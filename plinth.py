@@ -571,6 +571,7 @@ class Tokens:
     SLICE = "slice"
     LENGTH = "length"
     INSERT = "insert"
+    LIST = "list"
 
     # used to de-sugar various syntactic elements
     DESUGAR = {
@@ -1171,6 +1172,7 @@ define = PrimitiveFunction(lambda symbol, value: None)
 if_ = PrimitiveFunction(lambda cond, success, failure: None)
 and_ = PrimitiveFunction(lambda a, b, *rest: None)
 or_ = PrimitiveFunction(lambda a, b, *rest: None)
+list_ = PrimitiveFunction(lambda *items: None)
 
 # the base environment for the interpreter
 global_env = Environment(None)
@@ -1182,6 +1184,7 @@ global_env[Symbol(Tokens.DEFINE)] = define
 global_env[Symbol(Tokens.IF)] = if_
 global_env[Symbol(Tokens.AND)] = and_
 global_env[Symbol(Tokens.OR)] = or_
+global_env[Symbol(Tokens.LIST)] = list_
 
 # adds a new primitive function to the gloval environment
 add_prim = lambda t, f: global_env.__setitem__(Symbol(t), PrimitiveFunction(f))
@@ -1267,6 +1270,13 @@ def evaluate(item, env=global_env):
 
             # return the argument to quote unevaluated
             return args[0]
+
+        # list
+        elif function is list_:
+            result = List()
+            for item in args:
+                result.append(evaluate(item, env))
+            return result
 
         # function
         elif function is lambda_:

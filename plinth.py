@@ -892,6 +892,16 @@ def mul(a, b, *rest):
 
     return Number.to_number(product)
 
+def div(a, b):
+    """Divides the second Number by the first Number."""
+
+    if not isinstance(a, Number):
+        raise WrongArgumentTypeError(a, Number)
+    elif not isinstance(b, Number):
+        raise WrongArgumentTypeError(b, Number)
+
+    return Number.to_number(a.value / b.value)
+
 def power(a, b):
     """Raises a to the power of b."""
 
@@ -903,7 +913,7 @@ def power(a, b):
     return Number.to_number(a.value ** b.value)
 
 def sin(a):
-    """Takes the sin of a."""
+    """Takes the sine of a."""
 
     if not isinstance(a, Number):
         raise WrongArgumentTypeError(a, Number)
@@ -941,16 +951,6 @@ def atan2(a):
         raise WrongArgumentTypeError(a, Number)
 
     return Number.to_number(math.atan2(a.value))
-
-def div(a, b):
-    """Subtracts the second Number from the first Number."""
-
-    if not isinstance(a, Number):
-        raise WrongArgumentTypeError(a, Number)
-    elif not isinstance(b, Number):
-        raise WrongArgumentTypeError(b, Number)
-
-    return Number.to_number(a.value / b.value)
 
 def booleanp(e):
     """Returns whether an element is a boolean or not."""

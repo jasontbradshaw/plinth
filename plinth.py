@@ -337,9 +337,7 @@ class Function(Atom):
     def __call__(self, *arg_values):
         """
         Evaluate this function given a list of values to use for its arguments
-        and return the result. Evaluates all arguments in the given environment
-        to obtain their values before inserting them into the evaluation
-        environment.
+        and return the result.
         """
 
         # ensure that we've got the correct number of argument values
@@ -390,7 +388,7 @@ class PrimitiveFunction(Function):
 
         self.method = method
 
-        # get our arguments with any variadic args
+        # get our arguments with any variadic arg
         args, vararg, _, _, = inspect.getargspec(method)
 
         # set the variadic argument (None if there wasn't one, else the arg)

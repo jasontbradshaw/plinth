@@ -728,13 +728,13 @@ def parse(token_source):
     # active scope where tokens are added.
     stack = [ast]
 
-    def add_token_fun(stack, token):
+    def add_token(token):
         """Adds a token to the active scope on the stack."""
 
         # add the token to the top-most (active) scope of the stack
         stack[-1].append(Atom.atomize(token))
 
-    def indent_fun(stack):
+    def indent():
         """Adds an indent level to the ast when an indent marker is found."""
 
         # add a new level to last indent scope and push same list onto stack
@@ -742,7 +742,7 @@ def parse(token_source):
         stack[-1].append(new_scope)
         stack.append(new_scope)
 
-    def dedent_fun(stack):
+    def dedent():
         """Reduces the indent level, changing the scope that receives tokens."""
 
         # remove current level of indentation from the stack
@@ -750,11 +750,6 @@ def parse(token_source):
 
         if len(stack) < 1:
             raise OpenParenError()
-
-    # work around python's read-only closures
-    indent = lambda: indent_fun(stack)
-    dedent = lambda: dedent_fun(stack)
-    add_token = lambda token: add_token_fun(stack, token)
 
     # we keep a buffer of string parts so we can concatenate all the parts of
     # the string together at once, and so we can check whether we're in a string

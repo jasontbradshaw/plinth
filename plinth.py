@@ -1060,8 +1060,12 @@ def equal(a, b):
     contents, etc.
     """
 
+    # the same item is equal to itself
+    if a is b:
+        return BoolTrue()
+
     # numbers are compared mathematically, regardless of type
-    if isinstance(a, Number) and isinstance(b, Number):
+    elif isinstance(a, Number) and isinstance(b, Number):
         return Boolean.to_boolean(a.value == b.value)
 
     # things can't be equal if they're not the same class

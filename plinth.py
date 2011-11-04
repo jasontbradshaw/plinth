@@ -3,6 +3,8 @@
 import math
 import inspect
 
+import tokens
+
 #
 # exceptions
 #
@@ -89,7 +91,7 @@ class Atom(object):
             return BoolFalse()
 
         # string
-        elif token[0] == Tokens.STRING and token[-1] == token[0]:
+        elif token[0] == tokens.STRING and token[-1] == token[0]:
             return String(token)
 
         # the base case for all tokens is a symbol
@@ -197,7 +199,7 @@ class String(Atom):
         s = str(value)
 
         # strip surrounding quotes if necessary
-        if s[0] == Tokens.STRING and s[-1] == s[0]:
+        if s[0] == tokens.STRING and s[-1] == s[0]:
             s = s[1:-1]
 
         # replace escape sequences with literal values
@@ -322,8 +324,8 @@ class Function(Atom):
         # create a normalized argument for a final vararg if there is one
         self.vararg = None
         if (len(self.arg_symbols) > 0 and
-                self.arg_symbols[-1].value.endswith(Tokens.VARARG)):
-            self.vararg = Symbol(self.arg_symbols[-1].value[:-len(Tokens.VARARG)])
+                self.arg_symbols[-1].value.endswith(tokens.VARARG)):
+            self.vararg = Symbol(self.arg_symbols[-1].value[:-len(tokens.VARARG)])
 
     def __str__(self):
         return "<function (" + ' '.join(map(str, self.arg_symbols)) + ")>"
@@ -397,7 +399,7 @@ class PrimitiveFunction(Function):
         # add the args and the only variadic arg (if there is one)
         self.arg_names = args
         if vararg is not None:
-            self.arg_names.append(vararg + Tokens.VARARG)
+            self.arg_names.append(vararg + tokens.VARARG)
 
     def __str__(self):
         return "<primitive-function (" + ' '.join(self.arg_names) + ")>"
@@ -496,217 +498,6 @@ class Environment:
     def __iter__(self):
         return self.items.__iter__()
 
-#
-# tokenizer
-#
-
-class Tokens:
-    """
-    A utility class for language tokens.
-    """
-
-    # base syntactic constructs
-    OPEN_PAREN = "("
-    CLOSE_PAREN = ")"
-    QUOTE = "'"
-    QUASIQUOTE = "`"
-    UNQUOTE = ","
-    WHITESPACE = frozenset([" ", "\t", "\n", "\r", "\f", "\v"])
-    ESCAPE_CHAR = "\\"
-    STRING = '"'
-    COMMENT = ";"
-    VARARG = "..."
-
-    # repl
-    READ = "read"
-    EVAL = "eval"
-    PRINT = "print"
-
-    # special functions
-    QUOTE_LONG = "quote"
-    QUASIQUOTE_LONG = "quasiquote"
-    UNQUOTE_LONG = "unquote"
-    LAMBDA = "lambda"
-    DEFINE = "define"
-    IF = "if"
-
-    # functional programming
-    MAP = "map"
-    APPLY = "apply"
-
-    # math
-    ADD = "+"
-    SUBTRACT = "-"
-    MULTIPLY = "*"
-    DIVIDE = "/"
-    POWER = "pow"
-    SIN = "sin"
-    COS = "cos"
-    TAN = "tan"
-    ARCTAN = "atan"
-    ARCTAN2 = "atan2"
-
-    # comparison
-    IS = "is?"
-    EQUAL = "="
-    GREATER_THAN = ">"
-    GREATER_THAN_OR_EQUAL = ">="
-    LESS_THAN = "<"
-    LESS_THAN_OR_EQUAL = "<="
-
-    # logic
-    AND = "and"
-    OR = "or"
-    NOT = "not"
-
-    # type predicates
-    BOOLEANP = "boolean?"
-    LISTP = "list?"
-    SYMBOLP = "symbol?"
-    STRINGP = "string?"
-    NUMBERP = "number?"
-    INTEGERP = "integer?"
-    FLOATP = "float?"
-    FUNCTIONP = "function?"
-
-    # list
-    NTH = "nth"
-    SLICE = "slice"
-    LENGTH = "length"
-    INSERT = "insert"
-    LIST = "list"
-
-    # used to de-sugar various syntactic elements
-    DESUGAR = {
-        QUOTE: QUOTE_LONG,
-        UNQUOTE: UNQUOTE_LONG,
-        QUASIQUOTE: QUASIQUOTE_LONG
-    }
-
-    def __init__(self):
-        raise NotImplementedError("Can't instantiate the '" +
-                self.__class__.__name__ + "' class!")
-
-    @staticmethod
-    def is_open_paren(token):
-        return token == Tokens.OPEN_PAREN
-
-    @staticmethod
-    def is_close_paren(token):
-        return token == Tokens.CLOSE_PAREN
-
-    @staticmethod
-    def is_quote(token):
-        return token == Tokens.QUOTE
-
-    @staticmethod
-    def is_unquote(token):
-        return token == Tokens.UNQUOTE
-
-    @staticmethod
-    def is_quasiquote(token):
-        return token == Tokens.QUASIQUOTE
-
-    @staticmethod
-    def is_whitespace(token):
-        # return whether all the characters in the token are whitespace
-        for c in token:
-            if c not in Tokens.WHITESPACE:
-                return False
-        return True
-
-    @staticmethod
-    def is_escape_char(token):
-        return token == Tokens.ESCAPE_CHAR
-
-    @staticmethod
-    def is_string(token):
-        return token == Tokens.STRING
-
-    @staticmethod
-    def is_comment(token):
-        return token == Tokens.COMMENT
-
-    @staticmethod
-    def tokenize(source):
-        """
-        Given a string source, returns a generator that reads it character by
-        character and yields all the tokens in sequence.
-        """
-
-        # buffer where uncommitted characters live
-        buf = []
-
-        def flush():
-            """Returns the buffer contents as a string and clears the buffer."""
-
-            # get the contents of the buffer as a string
-            result = ''.join(buf)
-
-            # uses __delslice__ method of the list so we modify original buffer
-            # and not the local copy.
-            del buf[:]
-
-            # return the contents of the buffer
-            return result
-
-        # iterate over every character in the source string
-        for c in source:
-
-            # match escape characters, for having literal values in strings
-            if Tokens.is_escape_char(c):
-                if len(buf) > 0:
-                    yield flush()
-                yield c
-
-            # add string delimiters
-            elif Tokens.is_string(c):
-                if len(buf) > 0:
-                    yield flush()
-                yield c
-
-            # consume whitespace by collecting it in the buffer
-            elif Tokens.is_whitespace(c):
-                # flush out other characters before starting a whitespace buffer
-                if len(buf) != 0 and not Tokens.is_whitespace(buf[-1]):
-                    yield flush()
-
-                # append the whitespace now that the buffer contains no other
-                # characters.
-                buf.append(c)
-
-            # open parenthesis
-            elif Tokens.is_open_paren(c):
-                if len(buf) > 0:
-                    yield flush()
-                yield c
-
-            # close parenthesis
-            elif Tokens.is_close_paren(c):
-                if len(buf) > 0:
-                    yield flush()
-                yield c
-
-            # quotes, unquotes, and quasiquotes
-            elif c in Tokens.DESUGAR:
-                if len(buf) > 0:
-                    yield flush()
-                yield c
-
-            # just a normal character, so collect it in the buffer
-            else:
-                # flush whitespace from the buffer before adding normal
-                # characters.
-                if len(buf) > 0 and Tokens.is_whitespace(buf[-1]):
-                    yield flush()
-
-                # append the character now that the buffer contains no
-                # whitespace.
-                buf.append(c)
-
-        # do a final buffer flush to yield any remaining contents
-        if len(buf) > 0:
-            yield flush()
 
 #
 # interpreter
@@ -773,7 +564,7 @@ def parse(token_source):
             # the next iteration of the loop, whatever follows the escape char
             # will be appended literally. we make sure we're not currently
             # escaped so we can escape the escape character itself.
-            if Tokens.is_escape_char(token) and not is_escaped:
+            if tokens.is_escape_char(token) and not is_escaped:
                 is_escaped = True
 
             # if the token preceding this token is an escape char, this token
@@ -792,25 +583,25 @@ def parse(token_source):
                 del string_buf[:]
 
         # skip whitespace
-        elif Tokens.is_whitespace(token):
+        elif tokens.is_whitespace(token):
             pass
 
         # open parenthesis indents
-        elif Tokens.is_open_paren(token):
+        elif tokens.is_open_paren(token):
             indent()
 
         # close parenthesis dedents
-        elif Tokens.is_close_paren(token):
+        elif tokens.is_close_paren(token):
             dedent()
 
         # quote, unquote, quasiquote (the only sugar in our language)
-        elif token in Tokens.DESUGAR:
+        elif token in tokens.DESUGAR:
             # we mark the stack and position of the token for quick reference
             sugar_locations.append((stack[-1], len(stack[-1])))
             add_token(token)
 
         # mark strings
-        elif Tokens.is_string(token):
+        elif tokens.is_string(token):
             # mark us as being in a string, let the first case deal with rest
             string_buf.append(token)
 
@@ -839,7 +630,7 @@ def parse(token_source):
         # function and its argument. we assign it as a list since slice
         # replacement unwraps the iterable it's given, and we need our desugared
         # function to exist within its own List.
-        new_symbol = Symbol(Tokens.DESUGAR[scope[i].value])
+        new_symbol = Symbol(tokens.DESUGAR[scope[i].value])
         scope[i:i + 2] = [List(new_symbol, scope[i + 1])]
 
     # return the canonical abstract syntax tree
@@ -1196,62 +987,62 @@ list_ = PrimitiveFunction(lambda *items: None)
 global_env = Environment(None)
 
 # functions that need special treatment during evaluation
-global_env[Symbol(Tokens.QUOTE_LONG)] = quote
-global_env[Symbol(Tokens.LAMBDA)] = lambda_
-global_env[Symbol(Tokens.DEFINE)] = define
-global_env[Symbol(Tokens.IF)] = if_
-global_env[Symbol(Tokens.AND)] = and_
-global_env[Symbol(Tokens.OR)] = or_
-global_env[Symbol(Tokens.LIST)] = list_
+global_env[Symbol(tokens.QUOTE_LONG)] = quote
+global_env[Symbol(tokens.LAMBDA)] = lambda_
+global_env[Symbol(tokens.DEFINE)] = define
+global_env[Symbol(tokens.IF)] = if_
+global_env[Symbol(tokens.AND)] = and_
+global_env[Symbol(tokens.OR)] = or_
+global_env[Symbol(tokens.LIST)] = list_
 
 # adds a new primitive function to the gloval environment
 add_prim = lambda t, f: global_env.__setitem__(Symbol(t), PrimitiveFunction(f))
 
 # repl
-add_prim(Tokens.READ, read)
-add_prim(Tokens.EVAL, eval_)
+add_prim(tokens.READ, read)
+add_prim(tokens.EVAL, eval_)
 
 # logical
-add_prim(Tokens.NOT, not_)
+add_prim(tokens.NOT, not_)
 
 # math
-add_prim(Tokens.ADD, add)
-add_prim(Tokens.SUBTRACT, sub)
-add_prim(Tokens.MULTIPLY, mul)
-add_prim(Tokens.DIVIDE, div)
-add_prim(Tokens.POWER, power)
-add_prim(Tokens.SIN, sin)
-add_prim(Tokens.COS, cos)
-add_prim(Tokens.TAN, tan)
-add_prim(Tokens.ARCTAN, atan)
-add_prim(Tokens.ARCTAN2, atan2)
+add_prim(tokens.ADD, add)
+add_prim(tokens.SUBTRACT, sub)
+add_prim(tokens.MULTIPLY, mul)
+add_prim(tokens.DIVIDE, div)
+add_prim(tokens.POWER, power)
+add_prim(tokens.SIN, sin)
+add_prim(tokens.COS, cos)
+add_prim(tokens.TAN, tan)
+add_prim(tokens.ARCTAN, atan)
+add_prim(tokens.ARCTAN2, atan2)
 
 # functional programming
-add_prim(Tokens.APPLY, apply_)
+add_prim(tokens.APPLY, apply_)
 
 # comparison
-add_prim(Tokens.IS, is_)
-add_prim(Tokens.EQUAL, equal)
-add_prim(Tokens.GREATER_THAN, gt)
-add_prim(Tokens.GREATER_THAN_OR_EQUAL, gte)
-add_prim(Tokens.LESS_THAN, lt)
-add_prim(Tokens.LESS_THAN_OR_EQUAL, lte)
+add_prim(tokens.IS, is_)
+add_prim(tokens.EQUAL, equal)
+add_prim(tokens.GREATER_THAN, gt)
+add_prim(tokens.GREATER_THAN_OR_EQUAL, gte)
+add_prim(tokens.LESS_THAN, lt)
+add_prim(tokens.LESS_THAN_OR_EQUAL, lte)
 
 # types
-add_prim(Tokens.BOOLEANP, booleanp)
-add_prim(Tokens.LISTP, listp)
-add_prim(Tokens.SYMBOLP, symbolp)
-add_prim(Tokens.STRINGP, stringp)
-add_prim(Tokens.NUMBERP, numberp)
-add_prim(Tokens.INTEGERP, integerp)
-add_prim(Tokens.FLOATP, floatp)
-add_prim(Tokens.FUNCTIONP, functionp)
+add_prim(tokens.BOOLEANP, booleanp)
+add_prim(tokens.LISTP, listp)
+add_prim(tokens.SYMBOLP, symbolp)
+add_prim(tokens.STRINGP, stringp)
+add_prim(tokens.NUMBERP, numberp)
+add_prim(tokens.INTEGERP, integerp)
+add_prim(tokens.FLOATP, floatp)
+add_prim(tokens.FUNCTIONP, functionp)
 
 # list
-add_prim(Tokens.NTH, nth)
-add_prim(Tokens.SLICE, slice_)
-add_prim(Tokens.LENGTH, length)
-add_prim(Tokens.INSERT, insert)
+add_prim(tokens.NTH, nth)
+add_prim(tokens.SLICE, slice_)
+add_prim(tokens.LENGTH, length)
+add_prim(tokens.INSERT, insert)
 
 def evaluate(item, env=global_env):
     """
@@ -1401,10 +1192,10 @@ if __name__ == "__main__":
             source += raw_input(prompt)
 
             # strip comments from the source (it's as if they don't exist)
-            source = source.split(Tokens.COMMENT, 1)[0].strip()
+            source = source.split(tokens.COMMENT, 1)[0].strip()
 
             # evaluate every entered expression sequentially
-            for result in parse(Tokens.tokenize(source)):
+            for result in parse(tokens.tokenize(source)):
                 print evaluate(result)
 
             # reset the source and prompt on a successful evaluation

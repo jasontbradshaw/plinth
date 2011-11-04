@@ -217,19 +217,7 @@ class String(Atom):
         Atom.__init__(self, s)
 
     def __str__(self):
-        # replace literal values with escape sequences
-        s = self.value
-        s = s.replace("\\", "\\\\")
-        s = s.replace("\"", "\\\"")
-        s = s.replace("\a", "\\a")
-        s = s.replace("\b", "\\b")
-        s = s.replace("\f", "\\f")
-        s = s.replace("\n", "\\n")
-        s = s.replace("\r", "\\r")
-        s = s.replace("\t", "\\t")
-        s = s.replace("\v", "\\v")
-
-        return Tokens.STRING + s + Tokens.STRING
+        return tokens.STRING + repr(self.value)[1:-1] + tokens.STRING
 
     def __repr__(self):
         # return the literal string given to us, not the internal representation

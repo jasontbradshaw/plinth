@@ -637,7 +637,7 @@ class Tokens:
         # buffer where uncommitted characters live
         buf = []
 
-        def flush_fun(buf):
+        def flush():
             """Returns the buffer contents as a string and clears the buffer."""
 
             # get the contents of the buffer as a string
@@ -649,9 +649,6 @@ class Tokens:
 
             # return the contents of the buffer
             return result
-
-        # work around python's read-only closures
-        flush = lambda: flush_fun(buf)
 
         # iterate over every character in the source string
         for c in source:

@@ -953,6 +953,21 @@ add_prim(tokens.SLICE, slice_)
 add_prim(tokens.LENGTH, length)
 add_prim(tokens.INSERT, insert)
 
+def ensure_args(arg_list, count, exact=True):
+    """
+    Ensures that an argument list contains a number of arguments. When exact is
+    True (the default), ensures that the count is exactly that provided. When
+    exact is False, ensures that the count is at least the number provided.
+    """
+
+    if exact:
+        if len(arg_list) != count:
+            raise errors.IncorrectArgumentCountError(count, len(arg_list))
+    else:
+        if len(arg_list) < count:
+            raise errors.IncorrectArgumentCountError(count, len(arg_list))
+
+
 def evaluate(item, env=global_env):
     """
     Given an Atom or List element, evaluates it using the given environment
@@ -986,8 +1001,7 @@ def evaluate(item, env=global_env):
 
         # quote
         if function is quote:
-            if len(args) != 1:
-                raise errors.IncorrectArgumentCountError(1, len(args))
+            ensure_args(args, 1)
 
             # return the argument unevaluated
             return args[0]
@@ -1001,8 +1015,7 @@ def evaluate(item, env=global_env):
 
         # function
         elif function is lambda_:
-            if len(args) != 2:
-                raise errors.IncorrectArgumentCountError(2, len(args))
+            ensure_args(args, 2)
 
             arg_symbols = args[0]
             body = args[1]
@@ -1012,8 +1025,7 @@ def evaluate(item, env=global_env):
 
         # define
         elif function is define:
-            if len(args) != 2:
-                raise errors.IncorrectArgumentCountError(2, len(args))
+            ensure_args(args, 2)
 
             symbol = args[0]
             value = args[1]
@@ -1032,8 +1044,7 @@ def evaluate(item, env=global_env):
 
         # if
         elif function is if_:
-            if len(args) != 3:
-                raise errors.IncorrectArgumentCountError(3, len(args))
+            ensure_args(args, 3)
 
             cond = args[0]
             success_clause = args[1]
@@ -1046,8 +1057,7 @@ def evaluate(item, env=global_env):
 
         # logical and
         elif function is and_:
-            if len(args) < 2:
-                raise errors.IncorrectArgumentCountError(2, len(args))
+            ensure_args(args, 2, False)
 
             # evaluate the arguments, returning the final one if none were #f,
             # otherwise the last evaluated item, #f.
@@ -1061,8 +1071,7 @@ def evaluate(item, env=global_env):
 
         # logical or
         elif function is or_:
-            if len(args) < 2:
-                raise errors.IncorrectArgumentCountError(2, len(args))
+            ensure_args(args, 2, False)
 
             # evaluate the arguments, returning the first one that's not #f,
             last_item = None

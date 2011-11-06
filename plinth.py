@@ -591,48 +591,62 @@ def ensure_type(required_class, *items):
 def add(a, b, *rest):
     """Adds the all the given numbers together."""
 
-    # gather all the arguments into one list
-    nums = [a, b] + list(rest)
+    ensure_type(Number, a, b)
 
     # add all the arguments together while checking type
-    total = 0
-    for n in nums:
-        ensure_type(n, Number)
+    total = a.value + b.value
+    for n in rest:
+        ensure_type(Number, n)
         total += n.value
 
     return Number.to_number(total)
 
-def sub(a, b):
-    """Subtracts the second Number from the first Number."""
+def sub(a, b, *rest):
+    """Subtracts the given numbers in sequence."""
 
     ensure_type(Number, a, b)
 
-    return Number.to_number(a.value - b.value)
+    # subtract all the arguments in sequence while checking type
+    difference = a.value - b.value
+    for n in rest:
+        ensure_type(Number, n)
+        difference -= n.value
+
+    return Number.to_number(difference)
 
 def mul(a, b, *rest):
     """Multiplies all the given numbers together."""
 
-    # gather all the arguments into one list
-    nums = [a, b] + list(rest)
+    ensure_type(Number, a, b)
 
     # multiply all the arguments together while checking type
-    product = 1
-    for n in nums:
-        ensure_type(Number, n)
-        product *= n.value
-
+    product = a.value * b.value
+    for n in rest:
         # stop multiplying if the product ever goes to zero
         if product == 0:
             break
 
+        ensure_type(Number, n)
+        product *= n.value
+
     return Number.to_number(product)
 
-def div(a, b):
-    """Divides the second Number by the first Number."""
+def div(a, b, *rest):
+    """Divides the given numbers in sequence."""
 
     ensure_type(Number, a, b)
 
-    return Number.to_number(a.value / b.value)
+    # divide all the arguments in sequence while checking type
+    quotient = a.value / b.value
+    for n in rest:
+        # stop dividing if the quotient hits zero
+        if quotient == 0:
+            break
+
+        ensure_type(Number, n)
+        quotient /= n.value
+
+    return Number.to_number(quotient)
 
 def power(a, b):
     """Raises a to the power of b."""

@@ -335,7 +335,7 @@ class PrimitiveFunction(Function):
         self.method = method
 
         # get our arguments with any variadic arg
-        args, vararg, _, _, = inspect.getargspec(method)
+        args, vararg, _, _ = inspect.getargspec(method)
 
         # set the variadic argument (None if there wasn't one, else the arg)
         self.vararg = vararg

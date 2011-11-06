@@ -578,15 +578,18 @@ def parse(token_source):
     # return the canonical abstract syntax tree
     return ast
 
-def ensure_type(required_class, *items):
+def ensure_type(required_class, item, *rest):
     """
     Raises a WrongArgumentTypeError if all the items aren't instances of the
     required class.
     """
 
-    for item in items:
-        if not isinstance(item, required_class):
-            raise errors.WrongArgumentTypeError(item, required_class)
+    if not isinstance(item, required_class):
+        raise errors.WrongArgumentTypeError(item, required_class)
+
+    for thing in rest:
+        if not isinstance(thing, required_class):
+            raise errors.WrongArgumentTypeError(thing, required_class)
 
 def add(a, b, *rest):
     """Adds the all the given numbers together."""

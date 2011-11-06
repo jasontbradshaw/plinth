@@ -14,6 +14,10 @@ STRING = '"'
 COMMENT = ";"
 VARARG = "..."
 
+# true/false
+TRUE = "#t"
+FALSE = "#f"
+
 # repl
 READ = "read"
 EVAL = "eval"

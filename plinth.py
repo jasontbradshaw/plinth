@@ -44,9 +44,9 @@ class Atom(object):
             pass
 
         # boolean
-        if token.lower() == Boolean.TRUE_TOKEN:
+        if token.lower() == tokens.TRUE:
             return BoolTrue()
-        elif token.lower() == Boolean.FALSE_TOKEN:
+        elif token.lower() == tokens.FALSE:
             return BoolFalse()
 
         # string
@@ -200,9 +200,6 @@ class Boolean(Atom):
     Represents a single Boolean value.
     """
 
-    TRUE_TOKEN = "#t"
-    FALSE_TOKEN = "#f"
-
     def __init__(self, value):
         Atom.__init__(self, bool(value))
 
@@ -223,7 +220,7 @@ class BoolTrue(Boolean):
         Boolean.__init__(self, True)
 
     def __str__(self):
-        return Boolean.TRUE_TOKEN
+        return tokens.TRUE
 
     def __repr__(self):
         return self.__class__.__name__ + "()"
@@ -237,7 +234,7 @@ class BoolFalse(Boolean):
         Boolean.__init__(self, False)
 
     def __str__(self):
-        return Boolean.FALSE_TOKEN
+        return tokens.FALSE
 
     def __repr__(self):
         return self.__class__.__name__ + "()"

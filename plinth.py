@@ -968,7 +968,7 @@ def ensure_args(arg_list, count, exact=True):
             raise errors.IncorrectArgumentCountError(count, len(arg_list))
 
 
-def evaluate(item, env=global_env):
+def evaluate(item, env):
     """
     Given an Atom or List element, evaluates it using the given environment
     (global by default) and returns the result as represented in our language
@@ -1114,7 +1114,7 @@ if __name__ == "__main__":
 
             # evaluate every entered expression sequentially
             for result in parse(tokens.tokenize(source)):
-                print evaluate(result)
+                print evaluate(result, global_env)
 
             # reset the source and prompt on a successful evaluation
             source = ""

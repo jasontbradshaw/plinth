@@ -363,12 +363,12 @@ class PrimitiveFunction(Function):
             # we only check for the minimum number when variable
             if len(arg_values) < len(self.arg_names) - 1:
                 raise errors.IncorrectArgumentCountError(
-                        len(self.arg_count) - 1, len(arg_values))
+                        len(self.arg_names) - 1, len(arg_values))
         else:
             # we ensure direct correspondence when not variable
             if len(arg_values) != len(self.arg_names):
                 raise errors.IncorrectArgumentCountError(
-                        self.arg_count, len(arg_values))
+                        self.arg_names, len(arg_values))
 
         return self.method(*arg_values)
 

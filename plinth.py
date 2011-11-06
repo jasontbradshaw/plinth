@@ -800,7 +800,7 @@ def equal(a, b):
         # if we made it to here, we were equal!
         return BOOLEAN_TRUE
 
-    # functions can never be equal, there are too many things to check
+    # different functions can never be equal, there are too many things to check
     elif isinstance(a, Function):
         return BOOLEAN_FALSE
 

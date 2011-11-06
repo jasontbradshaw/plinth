@@ -580,6 +580,16 @@ def parse(token_source):
     # return the canonical abstract syntax tree
     return ast
 
+def ensure_type(required_class, *items):
+    """
+    Raises a WrongArgumentTypeError if all the items aren't instances of the
+    required class.
+    """
+
+    for item in items:
+        if not isinstance(item, required_class):
+            raise errors.WrongArgumentTypeError(item, required_class)
+
 def add(a, b, *rest):
     """Adds the all the given numbers together."""
 
@@ -589,8 +599,7 @@ def add(a, b, *rest):
     # add all the arguments together while checking type
     total = 0
     for n in nums:
-        if not isinstance(n, Number):
-            raise errors.WrongArgumentTypeError(n, Number)
+        ensure_type(n, Number)
         total += n.value
 
     return Number.to_number(total)
@@ -598,10 +607,7 @@ def add(a, b, *rest):
 def sub(a, b):
     """Subtracts the second Number from the first Number."""
 
-    if not isinstance(a, Number):
-        raise errors.WrongArgumentTypeError(a, Number)
-    elif not isinstance(b, Number):
-        raise errors.WrongArgumentTypeError(b, Number)
+    ensure_type(Number, a, b)
 
     return Number.to_number(a.value - b.value)
 
@@ -614,8 +620,7 @@ def mul(a, b, *rest):
     # multiply all the arguments together while checking type
     product = 1
     for n in nums:
-        if not isinstance(n, Number):
-            raise errors.WrongArgumentTypeError(n, Number)
+        ensure_type(Number, n)
         product *= n.value
 
         # stop multiplying if the product ever goes to zero
@@ -627,60 +632,49 @@ def mul(a, b, *rest):
 def div(a, b):
     """Divides the second Number by the first Number."""
 
-    if not isinstance(a, Number):
-        raise errors.WrongArgumentTypeError(a, Number)
-    elif not isinstance(b, Number):
-        raise errors.WrongArgumentTypeError(b, Number)
+    ensure_type(Number, a, b)
 
     return Number.to_number(a.value / b.value)
 
 def power(a, b):
     """Raises a to the power of b."""
 
-    if not isinstance(a, Number):
-        raise errors.WrongArgumentTypeError(a, Number)
-    elif not isinstance(b, Number):
-        raise errors.WrongArgumentTypeError(b, Number)
+    ensure_type(Number, a, b)
 
     return Number.to_number(a.value ** b.value)
 
 def sin(a):
     """Takes the sine of a."""
 
-    if not isinstance(a, Number):
-        raise errors.WrongArgumentTypeError(a, Number)
+    ensure_type(Number, a)
 
     return Number.to_number(math.sin(a.value))
 
 def cos(a):
     """Takes the cosine of a."""
 
-    if not isinstance(a, Number):
-        raise errors.WrongArgumentTypeError(a, Number)
+    ensure_type(Number, a)
 
     return Number.to_number(math.cos(a.value))
 
 def tan(a):
     """Takes the tangent of a."""
 
-    if not isinstance(a, Number):
-        raise errors.WrongArgumentTypeError(a, Number)
+    ensure_type(Number, a)
 
     return Number.to_number(math.tan(a.value))
 
 def atan(a):
     """Takes the arctangent of a."""
 
-    if not isinstance(a, Number):
-        raise errors.WrongArgumentTypeError(a, Number)
+    ensure_type(Number, a)
 
     return Number.to_number(math.atan(a.value))
 
 def atan2(a):
     """Takes the second arctangent of a."""
 
-    if not isinstance(a, Number):
-        raise errors.WrongArgumentTypeError(a, Number)
+    ensure_type(Number, a)
 
     return Number.to_number(math.atan2(a.value))
 
@@ -730,10 +724,8 @@ def nth(i, lst):
     exists or the element isn't a list.
     """
 
-    if not isinstance(lst, List):
-        raise errors.WrongArgumentTypeError(lst, List)
-    elif not isinstance(i, Integer):
-        raise errors.WrongArgumentTypeError(i, Integer)
+    ensure_type(List, lst)
+    ensure_type(Integer, i)
 
     # throws a nice index error by itself, we don't need to wrap it
     return lst[i.value]
@@ -744,12 +736,9 @@ def slice_(start, end, lst):
     (exclusive) in the given list.
     """
 
-    if not isinstance(lst, List):
-        raise errors.WrongArgumentTypeError(lst, List)
-    elif not isinstance(start, Integer):
-        raise errors.WrongArgumentTypeError(start, Integer)
-    elif not isinstance(end, Integer):
-        raise errors.WrongArgumentTypeError(end, Integer)
+    ensure_type(List, lst)
+    ensure_type(Integer, start)
+    ensure_type(Integer, end)
 
     return lst[start.value:end.value]
 
@@ -758,8 +747,7 @@ def length(lst):
     Returns the length of a list.
     """
 
-    if not isinstance(lst, List):
-        raise errors.WrongArgumentTypeError(lst, List)
+    ensure_type(List, lst)
 
     return Integer(len(lst))
 
@@ -769,10 +757,8 @@ def insert(i, item, lst):
     list with the item inserted at the specified position.
     """
 
-    if not isinstance(i, Integer):
-        raise errors.WrongArgumentTypeError(i, Integer)
-    elif not isinstance(lst, List):
-        raise errors.WrongArgumentTypeError(lst, List)
+    ensure_type(Integer, i)
+    ensure_type(List, lst)
 
     new_list = lst[:]
     new_list.insert(i.value, item)
@@ -832,10 +818,7 @@ def gt(a, b):
     Compares two numbers using >.
     """
 
-    if not isinstance(a, Number):
-        raise errors.WrongArgumentTypeError(a, Number)
-    elif not isinstance(b, Number):
-        raise errors.WrongArgumentTypeError(b, Number)
+    ensure_type(Number, a, b)
 
     return Boolean.to_boolean(a.value > b.value)
 
@@ -844,10 +827,7 @@ def gte(a, b):
     Compares two numbers using >=.
     """
 
-    if not isinstance(a, Number):
-        raise errors.WrongArgumentTypeError(a, Number)
-    elif not isinstance(b, Number):
-        raise errors.WrongArgumentTypeError(b, Number)
+    ensure_type(Number, a, b)
 
     return Boolean.to_boolean(a.value >= b.value)
 
@@ -856,10 +836,7 @@ def lt(a, b):
     Compares two numbers using <.
     """
 
-    if not isinstance(a, Number):
-        raise errors.WrongArgumentTypeError(a, Number)
-    elif not isinstance(b, Number):
-        raise errors.WrongArgumentTypeError(b, Number)
+    ensure_type(Number, a, b)
 
     return Boolean.to_boolean(a.value < b.value)
 
@@ -868,10 +845,7 @@ def lte(a, b):
     Compares two numbers using <=.
     """
 
-    if not isinstance(a, Number):
-        raise errors.WrongArgumentTypeError(a, Number)
-    elif not isinstance(b, Number):
-        raise errors.WrongArgumentTypeError(b, Number)
+    ensure_type(Number, a, b)
 
     return Boolean.to_boolean(a.value <= b.value)
 
@@ -880,10 +854,8 @@ def apply_(f, args):
     Applies a function to some arguments and returns the result.
     """
 
-    if not isinstance(f, Function):
-        raise errors.WrongArgumentTypeError(f, Function)
-    elif not isinstance(args, List):
-        raise errors.WrongArgumentTypeError(args, List)
+    ensure_type(Function, f)
+    ensure_type(List, args)
 
     return f(*args)
 
@@ -900,8 +872,7 @@ def read(s):
     Reads a string and returns a list of the S-expressions contained therein.
     """
 
-    if not isinstance(s, String):
-        raise errors.WrongArgumentTypeError(s, String)
+    ensure_type(String, s)
 
     return parse(s.value)
 

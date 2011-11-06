@@ -571,9 +571,7 @@ def parse(token_source):
 
         # have the sugar mark consume the item to its right and replace the
         # slots the two once filled with a new scope containing the desugared
-        # function and its argument. we assign it as a list since slice
-        # replacement unwraps the iterable it's given, and we need our desugared
-        # function to exist within its own List.
+        # function and its argument.
         new_symbol = Symbol(tokens.DESUGAR[scope[i].value])
         scope[i:i + 2] = [List(new_symbol, scope[i + 1])]
 

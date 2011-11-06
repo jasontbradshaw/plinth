@@ -4,48 +4,7 @@ import math
 import inspect
 
 import tokens
-
-#
-# exceptions
-#
-
-class ParserError(Exception):
-    """Raised when parsing input fails."""
-
-class OpenParenError(ParserError):
-    """Raised when there are too few opening parenthesis."""
-
-    def __init__(self):
-        ParserError.__init__(self, "too few opening parenthesis")
-
-class CloseParenError(ParserError):
-    """Raised when there are too few closing parenthesis."""
-
-    def __init__(self):
-        ParserError.__init__(self, "too few closing parenthesis")
-
-class SymbolNotFoundError(Exception):
-    """Raised when a symbol could not be found in an environment chain."""
-
-    def __init__(self, symbol):
-        Exception.__init__(self, "could not find " + str(symbol))
-
-class IncorrectArgumentCountError(Exception):
-    """Raised when a function is called with the wrong number of arguments."""
-
-    def __init__(self, expected, actual):
-        Exception.__init__(self, "expected " + str(expected) +
-                ", got " + str(actual))
-
-class WrongArgumentTypeError(Exception):
-    """Raised when an argument is of the wrong type."""
-    def __init__(self, arg, expected_class):
-        Exception.__init__(self, "wrong argument type for " + str(arg) +
-                ": expected " + expected_class.__name__.lower() + ", got " +
-                arg.__class__.__name__.lower())
-
-class ApplicationError(Exception):
-    """Raised when a function could not be applied correctly."""
+import errors
 
 #
 # language constructs
@@ -303,7 +262,7 @@ class Function(Atom):
         # all arguments must be symbols
         for item in arg_symbols:
             if not isinstance(item, Symbol):
-                raise WrongArgumentTypeError(item, Symbol)
+                raise errors.WrongArgumentTypeError(item, Symbol)
 
         self.arg_symbols = arg_symbols
         self.body = body
@@ -334,12 +293,12 @@ class Function(Atom):
         if self.vararg is not None:
             # we only check for the minimum number when variable
             if len(arg_values) < len(self.arg_symbols) - 1:
-                raise IncorrectArgumentCountError(
+                raise errors.IncorrectArgumentCountError(
                         len(self.arg_symbols) - 1, len(arg_values))
         else:
             # we ensure direct correspondence when not variable
             if len(arg_values) != len(self.arg_symbols):
-                raise IncorrectArgumentCountError(
+                raise errors.IncorrectArgumentCountError(
                         len(self.arg_symbols), len(arg_values))
 
         # create a new environment with the parent set as our parent environment
@@ -406,12 +365,12 @@ class PrimitiveFunction(Function):
         if self.vararg is not None:
             # we only check for the minimum number when variable
             if len(arg_values) < len(self.arg_names) - 1:
-                raise IncorrectArgumentCountError(
+                raise errors.IncorrectArgumentCountError(
                         len(self.arg_count) - 1, len(arg_values))
         else:
             # we ensure direct correspondence when not variable
             if len(arg_values) != len(self.arg_names):
-                raise IncorrectArgumentCountError(
+                raise errors.IncorrectArgumentCountError(
                         self.arg_count, len(arg_values))
 
         return self.method(*arg_values)
@@ -450,7 +409,7 @@ class Environment:
         elif isinstance(self.parent, Environment):
             return self.parent.find(symbol)
         else:
-            raise SymbolNotFoundError(symbol)
+            raise errors.SymbolNotFoundError(symbol)
 
     def update(self, other_dict):
         """
@@ -525,7 +484,7 @@ def parse(token_source):
         stack.pop()
 
         if len(stack) < 1:
-            raise OpenParenError()
+            raise errors.OpenParenError()
 
     # we keep a buffer of string parts so we can concatenate all the parts of
     # the string together at once, and so we can check whether we're in a string
@@ -599,19 +558,19 @@ def parse(token_source):
 
     # ensure all strings were correctly closed
     if len(string_buf) > 0:
-        raise ParserError("unclosed string")
+        raise errors.ParserError("unclosed string")
 
     # check to see if we matched all closing parenthesis (first item is always
     # tokens list, and it never gets popped).
     if len(stack) > 1:
-        raise CloseParenError()
+        raise errors.CloseParenError()
 
     # process all the quote marks into quote functions. we process right-to-left
     # to allow for occurences of "''foo" and the like.
     for scope, i in reversed(sugar_locations):
         # quotes must have something to consume
         if i == len(scope) - 1:
-            raise ParserError("invalid quote syntax")
+            raise errors.ParserError("invalid quote syntax")
 
         # have the sugar mark consume the item to its right and replace the
         # slots the two once filled with a new scope containing the desugared
@@ -634,7 +593,7 @@ def add(a, b, *rest):
     total = 0
     for n in nums:
         if not isinstance(n, Number):
-            raise WrongArgumentTypeError(n, Number)
+            raise errors.WrongArgumentTypeError(n, Number)
         total += n.value
 
     return Number.to_number(total)
@@ -643,9 +602,9 @@ def sub(a, b):
     """Subtracts the second Number from the first Number."""
 
     if not isinstance(a, Number):
-        raise WrongArgumentTypeError(a, Number)
+        raise errors.WrongArgumentTypeError(a, Number)
     elif not isinstance(b, Number):
-        raise WrongArgumentTypeError(b, Number)
+        raise errors.WrongArgumentTypeError(b, Number)
 
     return Number.to_number(a.value - b.value)
 
@@ -659,7 +618,7 @@ def mul(a, b, *rest):
     product = 1
     for n in nums:
         if not isinstance(n, Number):
-            raise WrongArgumentTypeError(n, Number)
+            raise errors.WrongArgumentTypeError(n, Number)
         product *= n.value
 
         # stop multiplying if the product ever goes to zero
@@ -672,9 +631,9 @@ def div(a, b):
     """Divides the second Number by the first Number."""
 
     if not isinstance(a, Number):
-        raise WrongArgumentTypeError(a, Number)
+        raise errors.WrongArgumentTypeError(a, Number)
     elif not isinstance(b, Number):
-        raise WrongArgumentTypeError(b, Number)
+        raise errors.WrongArgumentTypeError(b, Number)
 
     return Number.to_number(a.value / b.value)
 
@@ -682,9 +641,9 @@ def power(a, b):
     """Raises a to the power of b."""
 
     if not isinstance(a, Number):
-        raise WrongArgumentTypeError(a, Number)
+        raise errors.WrongArgumentTypeError(a, Number)
     elif not isinstance(b, Number):
-        raise WrongArgumentTypeError(b, Number)
+        raise errors.WrongArgumentTypeError(b, Number)
 
     return Number.to_number(a.value ** b.value)
 
@@ -692,7 +651,7 @@ def sin(a):
     """Takes the sine of a."""
 
     if not isinstance(a, Number):
-        raise WrongArgumentTypeError(a, Number)
+        raise errors.WrongArgumentTypeError(a, Number)
 
     return Number.to_number(math.sin(a.value))
 
@@ -700,7 +659,7 @@ def cos(a):
     """Takes the cosine of a."""
 
     if not isinstance(a, Number):
-        raise WrongArgumentTypeError(a, Number)
+        raise errors.WrongArgumentTypeError(a, Number)
 
     return Number.to_number(math.cos(a.value))
 
@@ -708,7 +667,7 @@ def tan(a):
     """Takes the tangent of a."""
 
     if not isinstance(a, Number):
-        raise WrongArgumentTypeError(a, Number)
+        raise errors.WrongArgumentTypeError(a, Number)
 
     return Number.to_number(math.tan(a.value))
 
@@ -716,7 +675,7 @@ def atan(a):
     """Takes the arctangent of a."""
 
     if not isinstance(a, Number):
-        raise WrongArgumentTypeError(a, Number)
+        raise errors.WrongArgumentTypeError(a, Number)
 
     return Number.to_number(math.atan(a.value))
 
@@ -724,7 +683,7 @@ def atan2(a):
     """Takes the second arctangent of a."""
 
     if not isinstance(a, Number):
-        raise WrongArgumentTypeError(a, Number)
+        raise errors.WrongArgumentTypeError(a, Number)
 
     return Number.to_number(math.atan2(a.value))
 
@@ -775,9 +734,9 @@ def nth(i, lst):
     """
 
     if not isinstance(lst, List):
-        raise WrongArgumentTypeError(lst, List)
+        raise errors.WrongArgumentTypeError(lst, List)
     elif not isinstance(i, Integer):
-        raise WrongArgumentTypeError(i, Integer)
+        raise errors.WrongArgumentTypeError(i, Integer)
 
     # throws a nice index error by itself, we don't need to wrap it
     return lst[i.value]
@@ -789,11 +748,11 @@ def slice_(start, end, lst):
     """
 
     if not isinstance(lst, List):
-        raise WrongArgumentTypeError(lst, List)
+        raise errors.WrongArgumentTypeError(lst, List)
     elif not isinstance(start, Integer):
-        raise WrongArgumentTypeError(start, Integer)
+        raise errors.WrongArgumentTypeError(start, Integer)
     elif not isinstance(end, Integer):
-        raise WrongArgumentTypeError(end, Integer)
+        raise errors.WrongArgumentTypeError(end, Integer)
 
     return lst[start.value:end.value]
 
@@ -803,7 +762,7 @@ def length(lst):
     """
 
     if not isinstance(lst, List):
-        raise WrongArgumentTypeError(lst, List)
+        raise errors.WrongArgumentTypeError(lst, List)
 
     return Integer(len(lst))
 
@@ -814,9 +773,9 @@ def insert(i, item, lst):
     """
 
     if not isinstance(i, Integer):
-        raise WrongArgumentTypeError(i, Integer)
+        raise errors.WrongArgumentTypeError(i, Integer)
     elif not isinstance(lst, List):
-        raise WrongArgumentTypeError(lst, List)
+        raise errors.WrongArgumentTypeError(lst, List)
 
     new_list = lst[:]
     new_list.insert(i.value, item)
@@ -877,9 +836,9 @@ def gt(a, b):
     """
 
     if not isinstance(a, Number):
-        raise WrongArgumentTypeError(a, Number)
+        raise errors.WrongArgumentTypeError(a, Number)
     elif not isinstance(b, Number):
-        raise WrongArgumentTypeError(b, Number)
+        raise errors.WrongArgumentTypeError(b, Number)
 
     return Boolean.to_boolean(a.value > b.value)
 
@@ -889,9 +848,9 @@ def gte(a, b):
     """
 
     if not isinstance(a, Number):
-        raise WrongArgumentTypeError(a, Number)
+        raise errors.WrongArgumentTypeError(a, Number)
     elif not isinstance(b, Number):
-        raise WrongArgumentTypeError(b, Number)
+        raise errors.WrongArgumentTypeError(b, Number)
 
     return Boolean.to_boolean(a.value >= b.value)
 
@@ -901,9 +860,9 @@ def lt(a, b):
     """
 
     if not isinstance(a, Number):
-        raise WrongArgumentTypeError(a, Number)
+        raise errors.WrongArgumentTypeError(a, Number)
     elif not isinstance(b, Number):
-        raise WrongArgumentTypeError(b, Number)
+        raise errors.WrongArgumentTypeError(b, Number)
 
     return Boolean.to_boolean(a.value < b.value)
 
@@ -913,9 +872,9 @@ def lte(a, b):
     """
 
     if not isinstance(a, Number):
-        raise WrongArgumentTypeError(a, Number)
+        raise errors.WrongArgumentTypeError(a, Number)
     elif not isinstance(b, Number):
-        raise WrongArgumentTypeError(b, Number)
+        raise errors.WrongArgumentTypeError(b, Number)
 
     return Boolean.to_boolean(a.value <= b.value)
 
@@ -925,9 +884,9 @@ def apply_(f, args):
     """
 
     if not isinstance(f, Function):
-        raise WrongArgumentTypeError(f, Function)
+        raise errors.WrongArgumentTypeError(f, Function)
     elif not isinstance(args, List):
-        raise WrongArgumentTypeError(args, List)
+        raise errors.WrongArgumentTypeError(args, List)
 
     return f(*args)
 
@@ -945,7 +904,7 @@ def read(s):
     """
 
     if not isinstance(s, String):
-        raise WrongArgumentTypeError(s, String)
+        raise errors.WrongArgumentTypeError(s, String)
 
     return parse(s.value)
 
@@ -1053,7 +1012,7 @@ def evaluate(item, env=global_env):
     else:
         # we can't evaluate functions that have nothing in them
         if len(item) == 0:
-            raise ApplicationError("nothing to apply")
+            raise errors.ApplicationError("nothing to apply")
 
         # evaluate functions using their arguments
         function = evaluate(item[0], env)
@@ -1061,12 +1020,12 @@ def evaluate(item, env=global_env):
 
         # make sure our first item evaluated to a function
         if not isinstance(function, Function):
-            raise ApplicationError("wrong type to apply: " + str(function))
+            raise errors.ApplicationError("wrong type to apply: " + str(function))
 
         # quote
         if function is quote:
             if len(args) != 1:
-                raise IncorrectArgumentCountError(1, len(args))
+                raise errors.IncorrectArgumentCountError(1, len(args))
 
             # return the argument unevaluated
             return args[0]
@@ -1081,7 +1040,7 @@ def evaluate(item, env=global_env):
         # function
         elif function is lambda_:
             if len(args) != 2:
-                raise IncorrectArgumentCountError(2, len(args))
+                raise errors.IncorrectArgumentCountError(2, len(args))
 
             arg_symbols = args[0]
             body = args[1]
@@ -1092,14 +1051,14 @@ def evaluate(item, env=global_env):
         # define
         elif function is define:
             if len(args) != 2:
-                raise IncorrectArgumentCountError(2, len(args))
+                raise errors.IncorrectArgumentCountError(2, len(args))
 
             symbol = args[0]
             value = args[1]
 
             # make sure we're defining to a symbol
             if not isinstance(symbol, Symbol):
-                raise WrongArgumentTypeError(symbol, Symbol)
+                raise errors.WrongArgumentTypeError(symbol, Symbol)
 
             # evaluate the argument, map the symbol to the result in the current
             # environment, then return the evaluated value. this allows for
@@ -1112,7 +1071,7 @@ def evaluate(item, env=global_env):
         # if
         elif function is if_:
             if len(args) != 3:
-                raise IncorrectArgumentCountError(3, len(args))
+                raise errors.IncorrectArgumentCountError(3, len(args))
 
             cond = args[0]
             success_clause = args[1]
@@ -1126,7 +1085,7 @@ def evaluate(item, env=global_env):
         # logical and
         elif function is and_:
             if len(args) < 2:
-                raise IncorrectArgumentCountError(2, len(args))
+                raise errors.IncorrectArgumentCountError(2, len(args))
 
             # evaluate the arguments, returning the final one if none were #f,
             # otherwise the last evaluated item, #f.
@@ -1141,7 +1100,7 @@ def evaluate(item, env=global_env):
         # logical or
         elif function is or_:
             if len(args) < 2:
-                raise IncorrectArgumentCountError(2, len(args))
+                raise errors.IncorrectArgumentCountError(2, len(args))
 
             # evaluate the arguments, returning the firt one that's not #f,
             last_item = None
@@ -1190,7 +1149,7 @@ if __name__ == "__main__":
             source = ""
             prompt = standard_prompt
 
-        except ParserError:
+        except errors.ParserError:
             # allow the user to finish entering a correct expression
             prompt = continue_prompt
             source += os.linesep

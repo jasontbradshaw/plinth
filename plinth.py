@@ -45,9 +45,9 @@ class Atom(object):
 
         # boolean
         if token.lower() == tokens.TRUE:
-            return BoolTrue()
+            return BOOLEAN_TRUE
         elif token.lower() == tokens.FALSE:
-            return BoolFalse()
+            return BOOLEAN_FALSE
 
         # string
         elif token[0] == tokens.STRING and token[-1] == token[0]:
@@ -203,41 +203,20 @@ class Boolean(Atom):
     def __init__(self, value):
         Atom.__init__(self, bool(value))
 
+    def __str__(self):
+        return tokens.TRUE if self.value else tokens.FALSE
+
     @staticmethod
     def to_boolean(item):
         """
-        Transforms the given boolean primitive into BoolTrue or BoolFalse.
+        Maps the given boolean primitive to BOOLEAN_TRUE or BOOLEAN_FALSE.
         """
 
-        return BoolTrue() if item else BoolFalse()
+        return BOOLEAN_TRUE if item else BOOLEAN_FALSE
 
-class BoolTrue(Boolean):
-    """
-    Represents the 'true' Boolean value.
-    """
-
-    def __init__(self):
-        Boolean.__init__(self, True)
-
-    def __str__(self):
-        return tokens.TRUE
-
-    def __repr__(self):
-        return self.__class__.__name__ + "()"
-
-class BoolFalse(Boolean):
-    """
-    Represents the 'false' Boolean value.
-    """
-
-    def __init__(self):
-        Boolean.__init__(self, False)
-
-    def __str__(self):
-        return tokens.FALSE
-
-    def __repr__(self):
-        return self.__class__.__name__ + "()"
+# singletons for true/false
+BOOLEAN_TRUE = Boolean(True)
+BOOLEAN_FALSE = Boolean(False)
 
 class Function(Atom):
     """
@@ -795,7 +774,7 @@ def equal(a, b):
 
     # the same item is equal to itself
     if a is b:
-        return BoolTrue()
+        return BOOLEAN_TRUE
 
     # numbers are compared mathematically, regardless of type
     elif isinstance(a, Number) and isinstance(b, Number):
@@ -803,7 +782,7 @@ def equal(a, b):
 
     # things can't be equal if they're not the same class
     elif not (isinstance(a, b.__class__) and isinstance(b, a.__class__)):
-        return BoolFalse()
+        return BOOLEAN_FALSE
 
     # we know both args are of the same class now, no need to check both
 
@@ -811,19 +790,19 @@ def equal(a, b):
     elif isinstance(a, List):
         # must be of the same length
         if len(a) != len(b):
-            return BoolFalse()
+            return BOOLEAN_FALSE
 
         # compare all items in the list
         for a_item, b_item in zip(a, b):
             if not equal(a_item, b_item).value:
-                return BoolFalse()
+                return BOOLEAN_FALSE
 
         # if we made it to here, we were equal!
-        return BoolTrue()
+        return BOOLEAN_TRUE
 
     # functions can never be equal, there are too many things to check
     elif isinstance(a, Function):
-        return BoolFalse()
+        return BOOLEAN_FALSE
 
     # compare everything else by value (booleans, symbols, etc.)
     return Boolean.to_boolean(a.value == b.value)
@@ -880,7 +859,7 @@ def not_(a):
     are #t, so we return the opposite of that.
     """
 
-    return Boolean.to_boolean(isinstance(a, BoolFalse))
+    return Boolean.to_boolean(isinstance(a, Boolean) and not a.value)
 
 def read(s):
     """
@@ -1061,7 +1040,7 @@ def evaluate(item, env=global_env):
             failure_clause = args[2]
 
             # every value is considered #t except for #f
-            if isinstance(evaluate(cond, env), BoolFalse):
+            if evaluate(cond, env) is BOOLEAN_FALSE:
                 return evaluate(failure_clause, env)
             return evaluate(success_clause, env)
 
@@ -1075,7 +1054,7 @@ def evaluate(item, env=global_env):
             last_item = None
             for item in args:
                 last_item = evaluate(item, env)
-                if isinstance(last_item, BoolFalse):
+                if last_item is BOOLEAN_FALSE:
                     break
 
             return last_item
@@ -1085,11 +1064,11 @@ def evaluate(item, env=global_env):
             if len(args) < 2:
                 raise errors.IncorrectArgumentCountError(2, len(args))
 
-            # evaluate the arguments, returning the firt one that's not #f,
+            # evaluate the arguments, returning the first one that's not #f,
             last_item = None
             for item in args:
                 last_item = evaluate(item, env)
-                if not isinstance(last_item, BoolFalse):
+                if not last_item is BOOLEAN_FALSE:
                     break
 
             return last_item

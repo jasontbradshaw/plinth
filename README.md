@@ -38,7 +38,7 @@ plinth supports a number of built-in functions.
    returns its second argument without evaluating it. Hence, `(and #t 3)`
    returns `3`. The same logic applies to all logical operators.
 
- * `lambda` defines a function. It takes as its parameters a list of symbols to
+ * `lambda` returns a function. It takes as its parameters a list of symbols to
    use as arguments, and an expression to execute over the given argument
    symbols.  Functions are closed over the current scope, and carry their parent
    scope with them for their lifetime. Functions can receive variadic arguments

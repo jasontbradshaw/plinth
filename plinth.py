@@ -739,6 +739,26 @@ def read(s):
     ensure_type(basestring, s)
     return Cons.build_list(*parse(tokens.tokenize(convert_string(s))))
 
+def import_(fname):
+    """Read a file and evaluate it into the global scope."""
+
+    ensure_type(basestring, fname)
+    fname = convert_string(fname)
+
+    def file_char_iter(f):
+        """Iterate over a file one character at a time."""
+        for line in f:
+            for c in line:
+                yield c
+
+    # evaluate every expression in the file in sequence, top to bottom
+    with open(os.path.abspath(fname), "r") as f:
+        for result in parse(tokens.tokenize(file_char_iter(f))):
+            evaluate(result, global_env)
+
+    # return that we were successful
+    return True
+
 def eval_(sexp):
     """Evaluate an S-expression in the global scope and return the result."""
     return evaluate(sexp, global_env)
@@ -773,6 +793,7 @@ add_prim = lambda t, f: global_env.__setitem__(Symbol(t), PrimitiveFunction(f))
 
 # repl
 add_prim(tokens.READ, read)
+add_prim(tokens.IMPORT, import_)
 
 # logical
 add_prim(tokens.NOT, not_)

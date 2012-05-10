@@ -865,10 +865,6 @@ def evaluate(item, env):
                 return Cons.build_list(args[0])
             return args[0]
 
-        # list
-        elif function is cons:
-            return Cons.build_list(evaluate(item, env) for item in args)
-
         # function
         elif function is lambda_:
             ensure_args(args, 2)

@@ -507,7 +507,6 @@ def parse(token_source):
         scope[i] = [new_symbol, new_item]
         del scope[i + 1]
 
-
     # return the canonical abstract syntax tree
     return ast
 
@@ -523,6 +522,10 @@ def ensure_type(required_class, item, *rest):
     for thing in rest:
         if not isinstance(thing, required_class):
             raise errors.WrongArgumentTypeError(thing, required_class)
+
+def convert_string(s):
+    """Strips enclosing string tokens from a string and returns the value."""
+    return s[len(tokens.STRING):-len(tokens.STRING)]
 
 def add(a, b, *rest):
     """Adds the all the given numbers together."""
@@ -743,8 +746,8 @@ def cdr(e):
 
 def read(s):
     """Read a string and returns a list of the S-expressions it describes."""
-    ensure_type(String, s)
-    return parse(s.value)
+    ensure_type(basestring, s)
+    return Cons.build_list(*parse(tokens.tokenize(convert_string(s))))
 
 def eval_(sexp):
     """Evaluate an S-expression in the global scope and return the result."""

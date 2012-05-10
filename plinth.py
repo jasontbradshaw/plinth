@@ -712,16 +712,6 @@ def gt(a, b):
     ensure_type(NUMBER_TYPES, a, b)
     return a > b
 
-def apply_(f, args):
-    """
-    Applies a function to some arguments and returns the result.
-    """
-
-    ensure_type(Function, f)
-    ensure_type(Cons, args)
-
-    return f(args)
-
 def not_(a):
     """
     Returns the opposite boolean of that passed in. All things that aren't #f
@@ -798,9 +788,6 @@ add_prim(tokens.COS, cos)
 add_prim(tokens.TAN, tan)
 add_prim(tokens.ARCTAN, atan)
 add_prim(tokens.ARCTAN2, atan2)
-
-# functional programming
-add_prim(tokens.APPLY, apply_)
 
 # comparison
 add_prim(tokens.IS, is_)

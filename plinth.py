@@ -1017,9 +1017,6 @@ if __name__ == "__main__":
             # get input from user and try to tokenize, parse, and print it
             source += raw_input(prompt)
 
-            # strip comments from the source (it's as if they don't exist)
-            source = source.split(tokens.COMMENT, 1)[0].strip()
-
             # evaluate every entered expression sequentially
             for result in parse(tokens.tokenize(source)):
                 print prettify(evaluate(result, global_env))

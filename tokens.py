@@ -1,6 +1,8 @@
-# the tokens module contains all the variables for matching the various tokens,
-# as well as functions for determining whether a string is some token. also
-# contains a function for generating a stream of tokens from some string input.
+# the tokens module contains all the variables for matching the various tokens.
+# also contains the tokenize function for generating a stream of tokens from
+# some string input.
+
+import os
 
 # base syntactic constructs
 OPEN_PAREN = "("
@@ -32,10 +34,6 @@ UNQUOTE_LONG = "unquote"
 LAMBDA = "lambda"
 DEFINE = "define"
 COND = "cond"
-
-# functional programming
-MAP = "map"
-APPLY = "apply"
 
 # math
 ADD = "+"
@@ -105,11 +103,27 @@ def tokenize(source):
         # return the contents of the buffer
         return result
 
+    # skip comments entirely
+    in_comment = False
+
     # iterate over every character in the source string
     for c in source:
 
+        if in_comment:
+            # skip all characters until a line separator is encountered
+            if c not in os.linesep:
+                continue
+
+            # turn off comment skipping, yield the line separator
+            in_comment = False
+            yield c
+
+        elif c == COMMENT:
+            # skip the comment character and all others until end-of-line
+            in_comment = True
+
         # match escape characters, for having literal values in strings
-        if c == ESCAPE_CHAR:
+        elif c == ESCAPE_CHAR:
             if len(buf) > 0:
                 yield flush()
             yield c

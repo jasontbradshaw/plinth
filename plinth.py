@@ -2,9 +2,14 @@
 
 import math
 import inspect
+import itertools
 
 import tokens
 import errors
+
+# shortcuts for all the various true number types and list types
+NUMBER_TYPES = (int, long, float, complex)
+LIST_TYPES = (list, tuple)
 
 #
 # language constructs
@@ -25,163 +30,132 @@ class Atom(object):
         return self.__class__.__name__ + "(" + repr(self.value) + ")"
 
     @staticmethod
-    def atomize(token):
+    def to_atom(token):
         """
-        Takes the given string token and returns an Atom representing that
-        string in its most natural form (Boolean, String, Integer, etc.).
+        Takes the given string token and returns the class representing that
+        string in its most natural form (int, str, Symbol, etc.).
         """
 
-        # integer
+        # number types: complex are invalid floats, and floats are invalid ints
         try:
-            return Integer(token)
-        except ValueError:
-            pass
-
-        # float
-        try:
-            return Float(token)
-        except ValueError:
-            pass
+            # automatically returns 'long' if necessary
+            return int(token)
+        except:
+            try:
+                return float(token)
+            except:
+                try:
+                    return complex(token)
+                except:
+                    pass
 
         # boolean
         if token.lower() == tokens.TRUE:
-            return BOOLEAN_TRUE
+            return True
         elif token.lower() == tokens.FALSE:
-            return BOOLEAN_FALSE
+            return False
 
-        # string
-        elif token[0] == tokens.STRING and token[-1] == token[0]:
-            return String(token)
+        # string (leaves wrapping string tokens intact)
+        elif token.startswith(tokens.STRING) and token.endswith(tokens.STRING):
+            return token
 
         # the base case for all tokens is a symbol
         return Symbol(token)
 
-class List:
-    """
-    Represents a linear collection of Atom and List elements.
-    """
+class Cons(object):
+    """Represents a pair of elements."""
 
-    def __init__(self, *items):
-        # save the given items
-        self.items = list(items)
+    def __init__(self, car, cdr):
+        self.__car = car
+        self.__cdr = cdr
+
+    @property
+    def car(self):
+        return self.__car
+
+    @property
+    def cdr(self):
+        return self.__cdr
+
+    @staticmethod
+    def build_list(*items):
+        """Builds a Cons sequence from some number of items."""
+
+        result = NIL
+
+        for item in reversed(items):
+            if isinstance(item, LIST_TYPES):
+                result = Cons(Cons.build_list(*item), result)
+            else:
+                result = Cons(item, result)
+
+        return result
+
+    def __str_helper(self, item):
+        # nil has no contents
+        if item is NIL:
+            return ""
+
+        if item.car is NIL and item.cdr is NIL:
+            return "() . ()"
+
+        if item.__cdr is NIL:
+            return str(item.car)
+
+        if not isinstance(item.cdr, Cons):
+            return str(item.car) + " . " + str(item.cdr)
+
+        return str(item.car) + " " + self.__str_helper(item.cdr)
 
     def __str__(self):
-        return "(" + " ".join(map(str, self.items)) + ")"
+        return "(" + self.__str_helper(self) + ")"
 
     def __repr__(self):
         return (self.__class__.__name__ +
-                "(" + ", ".join(map(repr, self.items)) + ")")
+               "(" + repr(self.__car) + ", " + repr(self.__cdr) + ")")
 
     def __len__(self):
-        return len(self.items)
+        if self is NIL:
+            # the nil val is always zero-length
+            return 0
+        elif isinstance(self.__cdr, self.__class__):
+            return 1 + len(self.__cdr)
+        else:
+            # not a valid list if cdr isn't of the same class
+            raise errors.WrongArgumentTypeError(self.__cdr, self.__class__)
 
-    def __getitem__(self, index):
-        return self.items[index]
+    def __eq__(self, other):
+        """Compare recursively."""
 
-    def __setitem__(self, index, value):
-        self.items[index] = value
+        for si, oi in itertools.izip(self, other):
+            if si != oi:
+                return False
 
-    def __getslice__(self, start=0, end=None):
-        # set end to our length if not specified
-        if end is None:
-            end = len(self)
-
-        # returns a List, not a list!
-        return List(*self.items[start:end])
+        return True
 
     def __iter__(self):
-        return self.items.__iter__()
-
-    def __reversed__(self):
-        return List(*reversed(self.items))
-
-    def append(self, item):
-        self.items.append(item)
-
-    def extend(self, other_items):
-        self.items.extend(other_items)
-
-    def pop(self, index=None):
-        if index is None:
-            index = len(self) - 1
-
-        self.items.pop(index)
-
-    def insert(self, index, item):
-        self.items.insert(index, item)
-
-class Number(Atom):
-    """
-    Numbers can be added, subtracted, etc. and hold a single value.
-    """
-
-    @staticmethod
-    def to_number(item):
         """
-        Transforms the given numeric primitive into one of our language's Number
-        objects.
+        Yield all the items in the cons sequence in turn. If the final item is
+        nil, None is returned instead.
         """
 
-        if hasattr(item, "is_integer"):
-            return Float(item)
-        return Integer(item)
+        item = self
 
-class Integer(Number):
-    """
-    Integers represent numbers with no decimal part.
-    """
+        # yield the first item of a simple pair if necessary
+        if not isinstance(item.cdr, Cons):
+            yield item.car
 
-    def __init__(self, value):
-        Number.__init__(self, int(value))
+        while 1:
+            if isinstance(item.cdr, Cons):
+                yield item.car
+                item = item.cdr
+            else:
+                # yield the final value and give up
+                yield item.cdr
+                break
 
-class Float(Number):
-    """
-    Floats represent floating-point numbers.
-    """
-
-    def __init__(self, value):
-        Number.__init__(self, float(value))
-
-    def __str__(self):
-        # we use repr to get the entire float value, unrounded
-        return repr(self.value)
-
-class String(Atom):
-    """
-    Strings are immutable collections of character data. There's no such thing
-    as a 'character' in our language, only single-element strings.
-    """
-
-    def __init__(self, value):
-        # take the raw string value and convert the escape sequences into Python
-        # literal representations.
-        s = str(value)
-
-        # strip surrounding quotes if necessary
-        if s[0] == tokens.STRING and s[-1] == s[0]:
-            s = s[1:-1]
-
-        # replace escape sequences with literal values
-        s = s.replace("\\\\", "\\")
-        s = s.replace("\\\"", "\"")
-        s = s.replace("\\a", "\a")
-        s = s.replace("\\b", "\b")
-        s = s.replace("\\f", "\f")
-        s = s.replace("\\n", "\n")
-        s = s.replace("\\r", "\r")
-        s = s.replace("\\t", "\t")
-        s = s.replace("\\v", "\v")
-
-        # set the value to the non-delimted, un-escaped string value
-        Atom.__init__(self, s)
-
-    def __str__(self):
-        return tokens.STRING + repr(self.value)[1:-1] + tokens.STRING
-
-    def __repr__(self):
-        # return the literal string given to us, not the internal representation
-        # since that has been un-escaoed.
-        return self.__class__.__name__ + "(" + str(self) + ")"
+# the singleton 'nil' value, an empty Cons: we define it here so Cons can use it
+NIL = Cons(None, None)
 
 class Symbol(Atom):
     """
@@ -194,29 +168,6 @@ class Symbol(Atom):
         """
 
         Atom.__init__(self, str(value))
-
-class Boolean(Atom):
-    """
-    Represents a single Boolean value.
-    """
-
-    def __init__(self, value):
-        Atom.__init__(self, bool(value))
-
-    def __str__(self):
-        return tokens.TRUE if self.value else tokens.FALSE
-
-    @staticmethod
-    def to_boolean(item):
-        """
-        Maps the given boolean primitive to BOOLEAN_TRUE or BOOLEAN_FALSE.
-        """
-
-        return BOOLEAN_TRUE if item else BOOLEAN_FALSE
-
-# singletons for true/false
-BOOLEAN_TRUE = Boolean(True)
-BOOLEAN_FALSE = Boolean(False)
 
 class Function(Atom):
     """
@@ -245,7 +196,7 @@ class Function(Atom):
         self.parent = parent
 
         # create a normalized argument for a final vararg if there is one
-        self.vararg = None
+        self.vararg = NIL
         if (len(self.arg_symbols) > 0 and
                 self.arg_symbols[-1].value.endswith(tokens.VARARG)):
             self.vararg = Symbol(self.arg_symbols[-1].value[:-len(tokens.VARARG)])
@@ -266,7 +217,7 @@ class Function(Atom):
         """
 
         # ensure that we've got the correct number of argument values
-        if self.vararg is not None:
+        if self.vararg is not NIL:
             # we only check for the minimum number when variable
             if len(arg_values) < len(self.arg_symbols) - 1:
                 raise errors.IncorrectArgumentCountError(
@@ -280,16 +231,17 @@ class Function(Atom):
         # create a new environment with the parent set as our parent environment
         env = Environment(self.parent)
 
-        # map the vararg to an empty list by default, to ensure it has a value
-        if self.vararg is not None:
-            env[self.vararg] = List()
+        # map the vararg to nil by default, to ensure it has a value
+        if self.vararg is not NIL:
+            env[self.vararg] = NIL
 
         # put the argument values into the new environment, mapping by position
-        for i, (symbol, value) in enumerate(zip(self.arg_symbols, arg_values)):
+        for i, (symbol, value) in enumerate(
+                itertools.izip(self.arg_symbols, arg_values)):
             # see if we're on the last argument and we have a variadic arg
-            if self.vararg is not None and i == len(self.arg_symbols) - 1:
+            if self.vararg is not NIL and i == len(self.arg_symbols) - 1:
                 # map it into the environment with the remaining arg values
-                env[self.vararg] = List(*arg_values[i:])
+                env[self.vararg] = Cons.build_list(*arg_values[i:])
 
             # add the symbol normally otherwise
             else:
@@ -404,18 +356,14 @@ class Environment:
 
     def __getitem__(self, symbol):
         assert isinstance(symbol, Symbol)
-
         return self.items[symbol.value]
 
     def __setitem__(self, symbol, value):
         assert isinstance(symbol, Symbol)
-        assert isinstance(value, Atom) or isinstance(value, List)
-
         self.items[symbol.value] = value
 
     def __contains__(self, symbol):
         assert isinstance(symbol, Symbol)
-
         return symbol.value in self.items
 
     def __iter__(self):
@@ -433,7 +381,7 @@ def parse(token_source):
     """
 
     # where the abstract syntax tree is held
-    ast = List()
+    ast = []
 
     # stack where the active scope is kept. starts with the ast as the initial
     # active scope where tokens are added.
@@ -443,13 +391,13 @@ def parse(token_source):
         """Adds a token to the active scope on the stack."""
 
         # add the token to the top-most (active) scope of the stack
-        stack[-1].append(Atom.atomize(token))
+        stack[-1].append(Atom.to_atom(token))
 
     def indent():
         """Adds an indent level to the ast when an indent marker is found."""
 
         # add a new level to last indent scope and push same list onto stack
-        new_scope = List()
+        new_scope = []
         stack[-1].append(new_scope)
         stack.append(new_scope)
 
@@ -487,7 +435,7 @@ def parse(token_source):
             # the next iteration of the loop, whatever follows the escape char
             # will be appended literally. we make sure we're not currently
             # escaped so we can escape the escape character itself.
-            if tokens.is_escape_char(token) and not is_escaped:
+            if token == tokens.ESCAPE_CHAR and not is_escaped:
                 is_escaped = True
 
             # if the token preceding this token is an escape char, this token
@@ -496,35 +444,33 @@ def parse(token_source):
                 is_escaped = False
 
             # end the string and flush if we found an unescaped string token
-            # that matched the initial string token kind. this allows us to
-            # possibly define several different string delimiting tokens.
-            elif token == string_buf[0]:
+            elif token == tokens.STRING:
                 # add the entire string as one token and clear the string buffer
                 add_token(''.join(string_buf))
 
                 # clear the string buffer in-place
                 del string_buf[:]
 
-        # skip whitespace
-        elif tokens.is_whitespace(token):
+        # skip whitespace (one character whitespace implies all are whitespace)
+        elif token[0] in tokens.WHITESPACE:
             pass
 
         # open parenthesis indents
-        elif tokens.is_open_paren(token):
+        elif token == tokens.OPEN_PAREN:
             indent()
 
         # close parenthesis dedents
-        elif tokens.is_close_paren(token):
+        elif token == tokens.CLOSE_PAREN:
             dedent()
 
         # quote, unquote, quasiquote (the only sugar in our language)
-        elif token in tokens.DESUGAR:
+        elif token in tokens.SUGAR:
             # we mark the stack and position of the token for quick reference
             sugar_locations.append((stack[-1], len(stack[-1])))
             add_token(token)
 
         # mark strings
-        elif tokens.is_string(token):
+        elif token == tokens.STRING:
             # mark us as being in a string, let the first case deal with rest
             string_buf.append(token)
 
@@ -551,8 +497,16 @@ def parse(token_source):
         # have the sugar mark consume the item to its right and replace the
         # slots the two once filled with a new scope containing the desugared
         # function and its argument.
-        new_symbol = Symbol(tokens.DESUGAR[scope[i].value])
-        scope[i:i + 2] = [List(new_symbol, scope[i + 1])]
+        new_symbol = Symbol(tokens.SUGAR[scope[i].value])
+
+        # convert quoted scopes into cons
+        new_item = scope[i + 1]
+        if isinstance(new_item, LIST_TYPES):
+            new_item = Cons.build_list(*new_item)
+
+        scope[i] = [new_symbol, new_item]
+        del scope[i + 1]
+
 
     # return the canonical abstract syntax tree
     return ast
@@ -560,7 +514,7 @@ def parse(token_source):
 def ensure_type(required_class, item, *rest):
     """
     Raises a WrongArgumentTypeError if all the items aren't instances of the
-    required class.
+    required class/classes tuple.
     """
 
     if not isinstance(item, required_class):
@@ -573,33 +527,33 @@ def ensure_type(required_class, item, *rest):
 def add(a, b, *rest):
     """Adds the all the given numbers together."""
 
-    ensure_type(Number, a, b)
+    ensure_type(NUMBER_TYPES, a, b)
 
     # add all the arguments together while checking type
-    total = a.value + b.value
+    total = a + b
     for n in rest:
-        ensure_type(Number, n)
-        total += n.value
+        ensure_type(NUMBER_TYPES, n)
+        total += n
 
-    return Number.to_number(total)
+    return total
 
 def sub(a, b, *rest):
     """Subtracts the given numbers in sequence."""
 
-    ensure_type(Number, a, b)
+    ensure_type(NUMBER_TYPES, a, b)
 
     # subtract all the arguments in sequence while checking type
-    difference = a.value - b.value
+    difference = a - b
     for n in rest:
-        ensure_type(Number, n)
-        difference -= n.value
+        ensure_type(NUMBER_TYPES, n)
+        difference -= n
 
-    return Number.to_number(difference)
+    return difference
 
 def mul(a, b, *rest):
     """Multiplies all the given numbers together."""
 
-    ensure_type(Number, a, b)
+    ensure_type(NUMBER_TYPES, a, b)
 
     # multiply all the arguments together while checking type
     product = a.value * b.value
@@ -608,7 +562,7 @@ def mul(a, b, *rest):
         if product == 0:
             break
 
-        ensure_type(Number, n)
+        ensure_type(NUMBER_TYPES, n)
         product *= n.value
 
     return Number.to_number(product)
@@ -616,232 +570,144 @@ def mul(a, b, *rest):
 def div(a, b, *rest):
     """Divides the given numbers in sequence."""
 
-    ensure_type(Number, a, b)
+    ensure_type(NUMBER_TYPES, a, b)
 
     # divide all the arguments in sequence while checking type
-    quotient = a.value / b.value
+    quotient = a / b
     for n in rest:
+        # TODO: should this optimization be done? complex? zeros?
         # stop dividing if the quotient hits zero
         if quotient == 0:
             break
 
-        ensure_type(Number, n)
-        quotient /= n.value
+        ensure_type(NUMBER_TYPES, n)
+        quotient /= n
 
-    return Number.to_number(quotient)
+    return quotient
 
 def power(a, b):
     """Raises a to the power of b."""
-
-    ensure_type(Number, a, b)
-
-    return Number.to_number(a.value ** b.value)
+    ensure_type(NUMBER_TYPES, a, b)
+    return a ** b
 
 def sin(a):
     """Takes the sine of a."""
-
-    ensure_type(Number, a)
-
-    return Number.to_number(math.sin(a.value))
+    ensure_type(NUMBER_TYPES, a)
+    return math.sin(a)
 
 def cos(a):
     """Takes the cosine of a."""
-
-    ensure_type(Number, a)
-
-    return Number.to_number(math.cos(a.value))
+    ensure_type(NUMBER_TYPES, a)
+    return math.cos(a)
 
 def tan(a):
     """Takes the tangent of a."""
-
-    ensure_type(Number, a)
-
-    return Number.to_number(math.tan(a.value))
+    ensure_type(NUMBER_TYPES, a)
+    return math.tan(a)
 
 def atan(a):
     """Takes the arctangent of a."""
-
-    ensure_type(Number, a)
-
-    return Number.to_number(math.atan(a.value))
+    ensure_type(NUMBER_TYPES, a)
+    return math.atan(a)
 
 def atan2(a):
     """Takes the second arctangent of a."""
-
-    ensure_type(Number, a)
-
-    return Number.to_number(math.atan2(a.value))
+    ensure_type(NUMBER_TYPES, a)
+    return math.atan2(a)
 
 def booleanp(e):
     """Returns whether an element is a boolean or not."""
-
-    return Boolean.to_boolean(isinstance(e, Boolean))
+    return isinstance(e, bool)
 
 def listp(e):
-    """Returns whether an element is a list or not."""
+    """Returns whether an element is a list or not (nil is a list)."""
 
-    return Boolean.to_boolean(isinstance(e, List))
+    # nil is a list
+    if e is NIL:
+        return True
+
+    # non-cons can't be lists
+    if not isinstance(e, Cons):
+        return False
+
+    # only cons that len() works on are lists (throws an exception otherwise)
+    try:
+        return bool(len(e)) or True
+    except errors.WrongArgumentTypeError:
+        return False
+
+def consp(e):
+    """Returns whether an element is a cons or not (nil is NOT a cons)."""
+    return e is not NIL and isinstance(e, Cons)
 
 def symbolp(e):
     """Returns whether an element is a symbol or not."""
-
-    return Boolean.to_boolean(isinstance(e, Symbol))
+    return isinstance(e, Symbol)
 
 def stringp(e):
     """Returns whether an element is a string or not."""
-
-    return Boolean.to_boolean(isinstance(e, String))
+    return isinstance(e, basestring)
 
 def numberp(e):
     """Returns whether an element is a number or not."""
-
-    return Boolean.to_boolean(isinstance(e, Number))
+    return isinstance(e, NUMBER_TYPES)
 
 def integerp(e):
     """Returns whether an element is an integer or not."""
-
-    return Boolean.to_boolean(isinstance(e, Integer))
+    return isinstance(e, (int, long))
 
 def floatp(e):
     """Returns whether an element is a float or not."""
+    return isinstance(e, float)
 
-    return Boolean.to_boolean(isinstance(e, Float))
+def complexp(e):
+    """Returns whether an element is a complex number or not."""
+    return isinstance(e, complex)
 
 def functionp(e):
     """Returns whether an element is a function or not."""
-
-    return Boolean.to_boolean(isinstance(e, Function))
-
-def nth(i, lst):
-    """
-    Returns the nth element of a list, or raises an error if no such index
-    exists or the element isn't a list.
-    """
-
-    ensure_type(List, lst)
-    ensure_type(Integer, i)
-
-    # throws a nice index error by itself, we don't need to wrap it
-    return lst[i.value]
-
-def slice_(start, end, lst):
-    """
-    Returns a new list containing the elements from start (inclusive) to end
-    (exclusive) in the given list.
-    """
-
-    ensure_type(List, lst)
-    ensure_type(Integer, start)
-    ensure_type(Integer, end)
-
-    return lst[start.value:end.value]
-
-def length(lst):
-    """
-    Returns the length of a list.
-    """
-
-    ensure_type(List, lst)
-
-    return Integer(len(lst))
-
-def insert(i, item, lst):
-    """
-    Insert an item before the given position in the given list and return a new
-    list with the item inserted at the specified position.
-    """
-
-    ensure_type(Integer, i)
-    ensure_type(List, lst)
-
-    new_list = lst[:]
-    new_list.insert(i.value, item)
-    return new_list
+    return isinstance(e, Function)
 
 def is_(a, b):
-    """
-    Returns true if the two items refer to the same object in memory.
-    """
-
-    return Boolean.to_boolean(a is b)
+    """Returns true if the two items refer to the same object in memory."""
+    return a is b
 
 def equal(a, b):
     """
     Returns true if two constructs are congruent. For example, numbers are
-    compared mathematically, lists are compared by structure and equivalent
+    compared mathematically, cons are compared by structure and equivalent
     contents, etc.
     """
 
     # the same item is equal to itself
     if a is b:
-        return BOOLEAN_TRUE
+        return True
 
     # numbers are compared mathematically, regardless of type
-    elif isinstance(a, Number) and isinstance(b, Number):
-        return Boolean.to_boolean(a.value == b.value)
+    elif isinstance(a, NUMBER_TYPES) and isinstance(b, NUMBER_TYPES):
+        return a == b
 
     # things can't be equal if they're not the same class
     elif not (isinstance(a, b.__class__) and isinstance(b, a.__class__)):
-        return BOOLEAN_FALSE
+        return False
 
     # we know both args are of the same class now, no need to check both
 
-    # compare lists recursively
-    elif isinstance(a, List):
-        # must be of the same length
-        if len(a) != len(b):
-            return BOOLEAN_FALSE
-
-        # compare all items in the list
-        for a_item, b_item in zip(a, b):
-            if not equal(a_item, b_item).value:
-                return BOOLEAN_FALSE
-
-        # if we made it to here, we were equal!
-        return BOOLEAN_TRUE
+    # compare cons recursively
+    elif isinstance(a, Cons):
+        return a == b
 
     # different functions can never be equal, there are too many things to check
     elif isinstance(a, Function):
-        return BOOLEAN_FALSE
+        return False
 
     # compare everything else by value (booleans, symbols, etc.)
-    return Boolean.to_boolean(a.value == b.value)
+    return a == b
 
 def gt(a, b):
-    """
-    Compares two numbers using >.
-    """
-
-    ensure_type(Number, a, b)
-
-    return Boolean.to_boolean(a.value > b.value)
-
-def gte(a, b):
-    """
-    Compares two numbers using >=.
-    """
-
-    ensure_type(Number, a, b)
-
-    return Boolean.to_boolean(a.value >= b.value)
-
-def lt(a, b):
-    """
-    Compares two numbers using <.
-    """
-
-    ensure_type(Number, a, b)
-
-    return Boolean.to_boolean(a.value < b.value)
-
-def lte(a, b):
-    """
-    Compares two numbers using <=.
-    """
-
-    ensure_type(Number, a, b)
-
-    return Boolean.to_boolean(a.value <= b.value)
+    """Compare two numbers using '>'."""
+    ensure_type(NUMBER_TYPES, a, b)
+    return a > b
 
 def apply_(f, args):
     """
@@ -849,9 +715,9 @@ def apply_(f, args):
     """
 
     ensure_type(Function, f)
-    ensure_type(List, args)
+    ensure_type(Cons, args)
 
-    return f(*args)
+    return f(args)
 
 def not_(a):
     """
@@ -859,22 +725,29 @@ def not_(a):
     are #t, so we return the opposite of that.
     """
 
-    return Boolean.to_boolean(isinstance(a, Boolean) and not a.value)
+    return isinstance(a, bool) and not a
+
+def cons(a, b):
+    """Pair two items."""
+    return Cons(a, b)
+
+def car(e):
+    """Return the first element of a pair."""
+    ensure_type(Cons, e)
+    return e.car
+
+def cdr(e):
+    """Return the second element of a pair."""
+    ensure_type(Cons, e)
+    return e.cdr
 
 def read(s):
-    """
-    Reads a string and returns a list of the S-expressions contained therein.
-    """
-
+    """Read a string and returns a list of the S-expressions it describes."""
     ensure_type(String, s)
-
     return parse(s.value)
 
 def eval_(sexp):
-    """
-    Evaluates an S-expression in the global environment and returns the result.
-    """
-
+    """Evaluate an S-expression in the global scope and return the result."""
     return evaluate(sexp, global_env)
 
 # these functions serve as markers for whether the function being called is
@@ -887,10 +760,9 @@ unquote = PrimitiveFunction(lambda e: None)
 quasiquote = PrimitiveFunction(lambda e: None)
 lambda_ = PrimitiveFunction(lambda args, body: None)
 define = PrimitiveFunction(lambda symbol, value: None)
-if_ = PrimitiveFunction(lambda cond, success, failure: None)
+cond = PrimitiveFunction(lambda cond, success, failure: None)
 and_ = PrimitiveFunction(lambda a, b, *rest: None)
 or_ = PrimitiveFunction(lambda a, b, *rest: None)
-list_ = PrimitiveFunction(lambda *items: None)
 
 # the base environment for the interpreter
 global_env = Environment(None)
@@ -899,17 +771,15 @@ global_env = Environment(None)
 global_env[Symbol(tokens.QUOTE_LONG)] = quote
 global_env[Symbol(tokens.LAMBDA)] = lambda_
 global_env[Symbol(tokens.DEFINE)] = define
-global_env[Symbol(tokens.IF)] = if_
+global_env[Symbol(tokens.COND)] = cond
 global_env[Symbol(tokens.AND)] = and_
 global_env[Symbol(tokens.OR)] = or_
-global_env[Symbol(tokens.LIST)] = list_
 
 # adds a new primitive function to the gloval environment
 add_prim = lambda t, f: global_env.__setitem__(Symbol(t), PrimitiveFunction(f))
 
 # repl
 add_prim(tokens.READ, read)
-add_prim(tokens.EVAL, eval_)
 
 # logical
 add_prim(tokens.NOT, not_)
@@ -933,25 +803,23 @@ add_prim(tokens.APPLY, apply_)
 add_prim(tokens.IS, is_)
 add_prim(tokens.EQUAL, equal)
 add_prim(tokens.GREATER_THAN, gt)
-add_prim(tokens.GREATER_THAN_OR_EQUAL, gte)
-add_prim(tokens.LESS_THAN, lt)
-add_prim(tokens.LESS_THAN_OR_EQUAL, lte)
 
 # types
 add_prim(tokens.BOOLEANP, booleanp)
+add_prim(tokens.CONSP, consp)
 add_prim(tokens.LISTP, listp)
 add_prim(tokens.SYMBOLP, symbolp)
 add_prim(tokens.STRINGP, stringp)
 add_prim(tokens.NUMBERP, numberp)
 add_prim(tokens.INTEGERP, integerp)
 add_prim(tokens.FLOATP, floatp)
+add_prim(tokens.COMPLEXP, complexp)
 add_prim(tokens.FUNCTIONP, functionp)
 
-# list
-add_prim(tokens.NTH, nth)
-add_prim(tokens.SLICE, slice_)
-add_prim(tokens.LENGTH, length)
-add_prim(tokens.INSERT, insert)
+# cons
+add_prim(tokens.CONS, cons)
+add_prim(tokens.CAR, car)
+add_prim(tokens.CDR, cdr)
 
 def ensure_args(arg_list, count, exact=True):
     """
@@ -967,10 +835,9 @@ def ensure_args(arg_list, count, exact=True):
         if len(arg_list) < count:
             raise errors.IncorrectArgumentCountError(count, len(arg_list))
 
-
 def evaluate(item, env):
     """
-    Given an Atom or List element, evaluates it using the given environment
+    Given an Atom or list, evaluates it using the given environment
     (global by default) and returns the result as represented in our language
     constructs.
     """
@@ -980,8 +847,8 @@ def evaluate(item, env):
         # look it up in the environment for its value
         return env.find(item)
 
-    # atom
-    elif not isinstance(item, List):
+    # atom (not a literal list)
+    elif not isinstance(item, LIST_TYPES):
         # it's a generic atom and evaluates to itself
         return item
 
@@ -1003,15 +870,14 @@ def evaluate(item, env):
         if function is quote:
             ensure_args(args, 1)
 
-            # return the argument unevaluated
+            # return the argument unevaluated, as a cons if a list
+            if isinstance(args[0], LIST_TYPES):
+                return Cons.build_list(args[0])
             return args[0]
 
         # list
-        elif function is list_:
-            result = List()
-            for item in args:
-                result.append(evaluate(item, env))
-            return result
+        elif function is cons:
+            return Cons.build_list(evaluate(item, env) for item in args)
 
         # function
         elif function is lambda_:
@@ -1043,15 +909,15 @@ def evaluate(item, env):
             return result
 
         # if
-        elif function is if_:
+        elif function is cond:
             ensure_args(args, 3)
 
-            cond = args[0]
+            c = args[0]
             success_clause = args[1]
             failure_clause = args[2]
 
             # every value is considered #t except for #f
-            if evaluate(cond, env) is BOOLEAN_FALSE:
+            if not evaluate(c, env):
                 return evaluate(failure_clause, env)
             return evaluate(success_clause, env)
 
@@ -1064,7 +930,7 @@ def evaluate(item, env):
             last_item = None
             for item in args:
                 last_item = evaluate(item, env)
-                if last_item is BOOLEAN_FALSE:
+                if last_item is False:
                     break
 
             return last_item
@@ -1077,7 +943,7 @@ def evaluate(item, env):
             last_item = None
             for item in args:
                 last_item = evaluate(item, env)
-                if not last_item is BOOLEAN_FALSE:
+                if not last_item is False:
                     break
 
             return last_item
@@ -1089,6 +955,18 @@ def evaluate(item, env):
 
         # we should never get this far
         assert False
+
+def prettify(item):
+    """Convert certain types into special strings, and all others normally."""
+
+    if isinstance(item, float):
+        return "%.10f" % item
+
+    if isinstance(item, bool):
+        return tokens.TRUE if item else tokens.FALSE
+
+    return str(item)
+
 
 if __name__ == "__main__":
     import sys
@@ -1114,7 +992,7 @@ if __name__ == "__main__":
 
             # evaluate every entered expression sequentially
             for result in parse(tokens.tokenize(source)):
-                print evaluate(result, global_env)
+                print prettify(evaluate(result, global_env))
 
             # reset the source and prompt on a successful evaluation
             source = ""

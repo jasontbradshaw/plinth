@@ -14,9 +14,10 @@ STRING = '"'
 COMMENT = ";"
 VARARG = "..."
 
-# true/false
+# true/false/nil
 TRUE = "#t"
 FALSE = "#f"
+NIL = "nil"
 
 # repl
 READ = "read"
@@ -29,7 +30,7 @@ QUASIQUOTE_LONG = "quasiquote"
 UNQUOTE_LONG = "unquote"
 LAMBDA = "lambda"
 DEFINE = "define"
-IF = "if"
+COND = "cond"
 
 # functional programming
 MAP = "map"
@@ -51,9 +52,6 @@ ARCTAN2 = "atan2"
 IS = "is?"
 EQUAL = "="
 GREATER_THAN = ">"
-GREATER_THAN_OR_EQUAL = ">="
-LESS_THAN = "<"
-LESS_THAN_OR_EQUAL = "<="
 
 # logic
 AND = "and"
@@ -62,58 +60,27 @@ NOT = "not"
 
 # type predicates
 BOOLEANP = "boolean?"
+CONSP = "cons?"
 LISTP = "list?"
 SYMBOLP = "symbol?"
 STRINGP = "string?"
 NUMBERP = "number?"
 INTEGERP = "integer?"
 FLOATP = "float?"
+COMPLEXP = "complex?"
 FUNCTIONP = "function?"
 
-# list
-NTH = "nth"
-SLICE = "slice"
-LENGTH = "length"
-INSERT = "insert"
-LIST = "list"
+# cons
+CONS = "cons"
+CAR = "car"
+CDR = "cdr"
 
 # used to de-sugar various syntactic elements
-DESUGAR = {
+SUGAR = {
     QUOTE: QUOTE_LONG,
     UNQUOTE: UNQUOTE_LONG,
     QUASIQUOTE: QUASIQUOTE_LONG
 }
-
-def is_open_paren(token):
-    return token == OPEN_PAREN
-
-def is_close_paren(token):
-    return token == CLOSE_PAREN
-
-def is_quote(token):
-    return token == QUOTE
-
-def is_unquote(token):
-    return token == UNQUOTE
-
-def is_quasiquote(token):
-    return token == QUASIQUOTE
-
-def is_whitespace(token):
-    # return whether all the characters in the token are whitespace
-    for c in token:
-        if c not in WHITESPACE:
-            return False
-    return True
-
-def is_escape_char(token):
-    return token == ESCAPE_CHAR
-
-def is_string(token):
-    return token == STRING
-
-def is_comment(token):
-    return token == COMMENT
 
 def tokenize(source):
     """
@@ -141,21 +108,21 @@ def tokenize(source):
     for c in source:
 
         # match escape characters, for having literal values in strings
-        if is_escape_char(c):
+        if c == ESCAPE_CHAR:
             if len(buf) > 0:
                 yield flush()
             yield c
 
         # add string delimiters
-        elif is_string(c):
+        elif c == STRING:
             if len(buf) > 0:
                 yield flush()
             yield c
 
         # consume whitespace by collecting it in the buffer
-        elif is_whitespace(c):
+        elif all(t in WHITESPACE for t in c):
             # flush out other characters before starting a whitespace buffer
-            if len(buf) != 0 and not is_whitespace(buf[-1]):
+            if len(buf) != 0 and buf[-1] not in WHITESPACE:
                 yield flush()
 
             # append the whitespace now that the buffer contains no other
@@ -163,19 +130,19 @@ def tokenize(source):
             buf.append(c)
 
         # open parenthesis
-        elif is_open_paren(c):
+        elif c == OPEN_PAREN:
             if len(buf) > 0:
                 yield flush()
             yield c
 
         # close parenthesis
-        elif is_close_paren(c):
+        elif c == CLOSE_PAREN:
             if len(buf) > 0:
                 yield flush()
             yield c
 
         # quotes, unquotes, and quasiquotes
-        elif c in DESUGAR:
+        elif c in SUGAR:
             if len(buf) > 0:
                 yield flush()
             yield c
@@ -184,7 +151,7 @@ def tokenize(source):
         else:
             # flush whitespace from the buffer before adding normal
             # characters.
-            if len(buf) > 0 and is_whitespace(buf[-1]):
+            if len(buf) > 0 and buf[-1] in WHITESPACE:
                 yield flush()
 
             # append the character now that the buffer contains no

@@ -773,7 +773,7 @@ unquote = PrimitiveFunction(lambda e: None)
 quasiquote = PrimitiveFunction(lambda e: None)
 lambda_ = PrimitiveFunction(lambda args, body: None)
 define = PrimitiveFunction(lambda symbol, value: None)
-cond = PrimitiveFunction(lambda cond, success, failure: None)
+cond = PrimitiveFunction(lambda *e: None)
 and_ = PrimitiveFunction(lambda a, b, *rest: None)
 or_ = PrimitiveFunction(lambda a, b, *rest: None)
 
@@ -915,18 +915,26 @@ def evaluate(item, env):
             env[symbol] = result
             return result
 
-        # if
+        # cond
         elif function is cond:
-            ensure_args(args, 3)
+            for tup in args:
+                # if e is not a list, len() raises an error for us
+                if len(tup) != 2:
+                    # make sure each is a list of exactly two expressions
+                    raise errors.IncorrectArgumentCountError("2 expressions",
+                            len(tup))
 
-            c = args[0]
-            success_clause = args[1]
-            failure_clause = args[2]
+                # first and second list items are condition and result
+                condition = tup[0]
+                result = tup[1]
 
-            # every value is considered #t except for #f
-            if not evaluate(c, env):
-                return evaluate(failure_clause, env)
-            return evaluate(success_clause, env)
+                # evaluate and return the result if condition is True
+                if evaluate(condition, env):
+                    return evaluate(result, env)
+
+            # if no result is returned, result is undefined
+            raise errors.ApplicationError("at least one condition must " +
+                    "evaluate to " + prettify(True))
 
         # logical and
         elif function is and_:

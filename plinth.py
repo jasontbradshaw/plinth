@@ -175,7 +175,7 @@ class Function(Atom):
     arguments, have a body, and are evaluated in some context.
     """
 
-    def __init__(self, arg_symbols, body, parent):
+    def __init__(self, arg_symbols, body, parent, name=None):
         """
         Creates a function given a list of its argument symbols, its body, and
         its parent environment, i.e. the environment it was created and will be
@@ -195,6 +195,9 @@ class Function(Atom):
         self.body = body
         self.parent = parent
 
+        # can be set by 'define' to name the function
+        self.name = name
+
         # create a normalized argument for a final vararg if there is one
         self.vararg = NIL
         if (len(self.arg_symbols) > 0 and
@@ -202,13 +205,17 @@ class Function(Atom):
             self.vararg = Symbol(self.arg_symbols[-1].value[:-len(tokens.VARARG)])
 
     def __str__(self):
-        return "<function (" + ' '.join(map(str, self.arg_symbols)) + ")>"
+        return ("<function" +
+                (" " + self.name if self.name is not None else "") +
+                " (" + ' '.join(map(str, self.arg_symbols)) + ")>")
 
     def __repr__(self):
         return (self.__class__.__name__ + "(" +
                 repr(self.arg_symbols) + ", " +
                 repr(self.body) + ", " +
-                repr(self.parent) + ")")
+                repr(self.parent) +
+                (", name=" + repr(self.name) if self.name is not None else "") +
+                ")")
 
     def __call__(self, *arg_values):
         """
@@ -256,7 +263,7 @@ class PrimitiveFunction(Function):
     of the constructs that enables the language to function.
     """
 
-    def __init__(self, method):
+    def __init__(self, method, name=None):
         """
         Create a primitive function that works much like a normal function,
         except that the method is a Python function that does work using the
@@ -264,6 +271,7 @@ class PrimitiveFunction(Function):
         """
 
         self.method = method
+        self.name = name
 
         # get our arguments with any variadic arg
         args, vararg, _, _ = inspect.getargspec(method)
@@ -277,11 +285,13 @@ class PrimitiveFunction(Function):
             self.arg_names.append(vararg + tokens.VARARG)
 
     def __str__(self):
-        return "<primitive-function (" + ' '.join(self.arg_names) + ")>"
+        return ("<primitive-function" +
+                (" " + self.name if self.name is not None else "") +
+                " (" + ' '.join(self.arg_names) + ")>")
 
     def __repr__(self):
-        return (self.__class__.__name__ + "(" + repr(self.method) + ", " +
-                ", ".join(map(repr, self.arg_names)) + ")")
+        return (self.__class__.__name__ + "(" + repr(self.method) +
+                (", name=" + self.name if self.name is not None else "") + ")")
 
     def __call__(self, *arg_values):
         """
@@ -346,6 +356,10 @@ class Environment:
 
         for key in other_dict:
             self[key] = other_dict[key]
+
+    def put(self, symbol, value):
+        """Shortcut for setting symbols to values."""
+        return self.__setitem__(symbol, value)
 
     def __str__(self):
         return str(self.items)
@@ -768,14 +782,14 @@ def eval_(sexp):
 # functions, and if so we evaluate it in whatever way it requires. this allows
 # the user to define new symbols that point to these functions, but still have
 # the functions work in the same way.
-quote = PrimitiveFunction(lambda e: None)
-unquote = PrimitiveFunction(lambda e: None)
-quasiquote = PrimitiveFunction(lambda e: None)
-lambda_ = PrimitiveFunction(lambda args, body: None)
-define = PrimitiveFunction(lambda symbol, value: None)
-cond = PrimitiveFunction(lambda *e: None)
-and_ = PrimitiveFunction(lambda a, b, *rest: None)
-or_ = PrimitiveFunction(lambda a, b, *rest: None)
+quote = PrimitiveFunction(lambda e: None, name=tokens.QUOTE_LONG)
+unquote = PrimitiveFunction(lambda e: None, name=tokens.UNQUOTE_LONG)
+quasiquote = PrimitiveFunction(lambda e: None, name=tokens.QUASIQUOTE_LONG)
+lambda_ = PrimitiveFunction(lambda args, body: None, name=tokens.LAMBDA)
+define = PrimitiveFunction(lambda symbol, value: None, name=tokens.DEFINE)
+cond = PrimitiveFunction(lambda *e: None, name=tokens.COND)
+and_ = PrimitiveFunction(lambda a, b, *rest: None, name=tokens.AND)
+or_ = PrimitiveFunction(lambda a, b, *rest: None, name=tokens.OR)
 
 # the base environment for the interpreter
 global_env = Environment(None)
@@ -789,7 +803,7 @@ global_env[Symbol(tokens.AND)] = and_
 global_env[Symbol(tokens.OR)] = or_
 
 # adds a new primitive function to the gloval environment
-add_prim = lambda t, f: global_env.__setitem__(Symbol(t), PrimitiveFunction(f))
+add_prim = lambda t, f: global_env.put(Symbol(t), PrimitiveFunction(f, name=t))
 
 # repl
 add_prim(tokens.READ, read)
@@ -913,6 +927,11 @@ def evaluate(item, env):
             # same value.
             result = evaluate(value, env)
             env[symbol] = result
+
+            # set a function name if one isn't set yet
+            if isinstance(result, Function) and result.name is None:
+                result.name = symbol.value
+
             return result
 
         # cond

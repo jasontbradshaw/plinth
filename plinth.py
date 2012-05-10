@@ -974,14 +974,10 @@ def evaluate(item, env):
 def prettify(item):
     """Convert certain types into special strings, and all others normally."""
 
-    if isinstance(item, float):
-        return "%.10f" % item
-
     if isinstance(item, bool):
         return tokens.TRUE if item else tokens.FALSE
 
     return str(item)
-
 
 if __name__ == "__main__":
     import sys

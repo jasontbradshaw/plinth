@@ -994,7 +994,7 @@ def evaluate(item, env):
         else:
             # evaluate the arguments normally before passing them to the
             # function and receiving the result.
-            return function(*map(lambda x: evaluate(x, env), args))
+            return function(*[evaluate(arg, env) for arg in args])
 
         # we should never get this far
         assert False

@@ -96,9 +96,6 @@ class Cons(object):
         if item is NIL:
             return ""
 
-        if item.car is NIL and item.cdr is NIL:
-            return "() . ()"
-
         if item.__cdr is NIL:
             return str(item.car)
 

@@ -79,7 +79,7 @@ class Cons(object):
 
     @staticmethod
     def build_list(*items):
-        """Builds a Cons sequence from some number of items."""
+        """Build a Cons sequence recursively from some number of items."""
 
         result = NIL
 
@@ -509,11 +509,7 @@ def parse(token_source):
         # slots the two once filled with a new scope containing the desugared
         # function and its argument.
         new_symbol = Symbol(tokens.SUGAR[scope[i].value])
-
-        # convert quoted scopes into cons
         new_item = scope[i + 1]
-        if isinstance(new_item, LIST_TYPES):
-            new_item = Cons.build_list(*new_item)
 
         scope[i] = [new_symbol, new_item]
         del scope[i + 1]
@@ -903,7 +899,8 @@ def evaluate(item, env):
 
             # return the argument unevaluated, as a cons if a list
             if isinstance(args[0], LIST_TYPES):
-                return Cons.build_list(args[0])
+                return Cons.build_list(*args[0])
+
             return args[0]
 
         # function

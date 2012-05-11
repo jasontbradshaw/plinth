@@ -119,7 +119,7 @@ class Cons(object):
             return 1 + len(self.__cdr)
         else:
             # not a valid list if cdr isn't of the same class
-            raise errors.WrongArgumentTypeError(self.__cdr, self.__class__)
+            raise errors.WrongArgumentTypeError.build(self.__cdr, self.__class__)
 
     def __eq__(self, other):
         """Compare recursively."""
@@ -186,7 +186,7 @@ class Function(Atom):
         # all arguments must be symbols
         for item in arg_symbols:
             if not isinstance(item, Symbol):
-                raise errors.WrongArgumentTypeError(item, Symbol)
+                raise errors.WrongArgumentTypeError.build(item, Symbol)
 
         self.arg_symbols = arg_symbols
         self.body = body
@@ -224,12 +224,12 @@ class Function(Atom):
         if self.vararg is not NIL:
             # we only check for the minimum number when variable
             if len(arg_values) < len(self.arg_symbols) - 1:
-                raise errors.IncorrectArgumentCountError(
+                raise errors.IncorrectArgumentCountError.build(
                         len(self.arg_symbols) - 1, len(arg_values))
         else:
             # we ensure direct correspondence when not variable
             if len(arg_values) != len(self.arg_symbols):
-                raise errors.IncorrectArgumentCountError(
+                raise errors.IncorrectArgumentCountError.build(
                         len(self.arg_symbols), len(arg_values))
 
         # create a new environment with the parent set as our parent environment
@@ -300,12 +300,12 @@ class PrimitiveFunction(Function):
         if self.vararg is not None:
             # we only check for the minimum number when variable
             if len(arg_values) < len(self.arg_names) - 1:
-                raise errors.IncorrectArgumentCountError(
+                raise errors.IncorrectArgumentCountError.build(
                         len(self.arg_names) - 1, len(arg_values))
         else:
             # we ensure direct correspondence when not variable
             if len(arg_values) != len(self.arg_names):
-                raise errors.IncorrectArgumentCountError(
+                raise errors.IncorrectArgumentCountError.build(
                         self.arg_names, len(arg_values))
 
         return self.method(*arg_values)
@@ -344,7 +344,7 @@ class Environment:
         elif isinstance(self.parent, Environment):
             return self.parent.find(symbol)
         else:
-            raise errors.SymbolNotFoundError(symbol)
+            raise errors.SymbolNotFoundError.build(symbol)
 
     def update(self, other_dict):
         """
@@ -419,7 +419,7 @@ def parse(token_source):
         stack.pop()
 
         if len(stack) < 1:
-            raise errors.OpenParenError()
+            raise errors.OpenParenError.build()
 
     # we keep a buffer of string parts so we can concatenate all the parts of
     # the string together at once, and so we can check whether we're in a string
@@ -496,7 +496,7 @@ def parse(token_source):
     # check to see if we matched all closing parenthesis (first item is always
     # tokens list, and it never gets popped).
     if len(stack) > 1:
-        raise errors.CloseParenError()
+        raise errors.CloseParenError.build()
 
     # process all the quote marks into quote functions. we process right-to-left
     # to allow for occurences of "''foo" and the like.
@@ -524,11 +524,11 @@ def ensure_type(required_class, item, *rest):
     """
 
     if not isinstance(item, required_class):
-        raise errors.WrongArgumentTypeError(item, required_class)
+        raise errors.WrongArgumentTypeError.build(item, required_class)
 
     for thing in rest:
         if not isinstance(thing, required_class):
-            raise errors.WrongArgumentTypeError(thing, required_class)
+            raise errors.WrongArgumentTypeError.build(thing, required_class)
 
 def convert_string(s):
     """Strips enclosing string tokens from a string and returns the value."""
@@ -857,10 +857,10 @@ def ensure_args(arg_list, count, exact=True):
 
     if exact:
         if len(arg_list) != count:
-            raise errors.IncorrectArgumentCountError(count, len(arg_list))
+            raise errors.IncorrectArgumentCountError.build(count, len(arg_list))
     else:
         if len(arg_list) < count:
-            raise errors.IncorrectArgumentCountError(count, len(arg_list))
+            raise errors.IncorrectArgumentCountError.build(count, len(arg_list))
 
 def evaluate(item, env):
     """
@@ -922,7 +922,7 @@ def evaluate(item, env):
 
             # make sure we're defining to a symbol
             if not isinstance(symbol, Symbol):
-                raise errors.WrongArgumentTypeError(symbol, Symbol)
+                raise errors.WrongArgumentTypeError.build(symbol, Symbol)
 
             # evaluate the argument, map the symbol to the result in the current
             # environment, then return the evaluated value. this allows for
@@ -943,8 +943,8 @@ def evaluate(item, env):
                 # if e is not a list, len() raises an error for us
                 if len(tup) != 2:
                     # make sure each is a list of exactly two expressions
-                    raise errors.IncorrectArgumentCountError("2 expressions",
-                            len(tup))
+                    raise errors.IncorrectArgumentCountError.build(
+                            "2 expressions", len(tup))
 
                 # first and second list items are condition and result
                 condition = tup[0]

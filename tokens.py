@@ -2,8 +2,6 @@
 # also contains the tokenize function for generating a stream of tokens from
 # some string input.
 
-import os
-
 # base syntactic constructs
 OPEN_PAREN = "("
 CLOSE_PAREN = ")"
@@ -14,6 +12,7 @@ WHITESPACE = frozenset([" ", "\t", "\n", "\r", "\f", "\v"])
 ESCAPE_CHAR = "\\"
 STRING = '"'
 COMMENT = ";"
+LINE_SEPARATORS = frozenset(["\r", "\n"])
 VARARG = "..."
 
 # true/false/nil
@@ -103,27 +102,28 @@ def tokenize(source):
         # return the contents of the buffer
         return result
 
-    # skip comments entirely
+    # used to skip comments entirely
     in_comment = False
 
     # iterate over every character in the source string
     for c in source:
 
+        # skip the comment character and all others until end-of-line
         if in_comment:
             # skip all characters until a line separator is encountered
-            if c not in os.linesep:
+            if c not in LINE_SEPARATORS:
                 continue
 
-            # turn off comment skipping, yield the line separator
+            # turn off comment skipping, parse the character as normal
             in_comment = False
-            yield c
 
+        # turn on comment skipping, start skipping comment contents
         elif c == COMMENT:
-            # skip the comment character and all others until end-of-line
             in_comment = True
+            continue
 
         # match escape characters, for having literal values in strings
-        elif c == ESCAPE_CHAR:
+        if c == ESCAPE_CHAR:
             if len(buf) > 0:
                 yield flush()
             yield c
@@ -135,13 +135,12 @@ def tokenize(source):
             yield c
 
         # consume whitespace by collecting it in the buffer
-        elif all(t in WHITESPACE for t in c):
+        elif c in WHITESPACE:
             # flush out other characters before starting a whitespace buffer
             if len(buf) != 0 and buf[-1] not in WHITESPACE:
                 yield flush()
 
-            # append the whitespace now that the buffer contains no other
-            # characters.
+            # append the whitespace now that the buffer contains no other chars
             buf.append(c)
 
         # open parenthesis
@@ -164,8 +163,7 @@ def tokenize(source):
 
         # just a normal character, so collect it in the buffer
         else:
-            # flush whitespace from the buffer before adding normal
-            # characters.
+            # flush whitespace from the buffer before adding normal characters
             if len(buf) > 0 and buf[-1] in WHITESPACE:
                 yield flush()
 

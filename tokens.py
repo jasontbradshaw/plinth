@@ -24,7 +24,7 @@ NIL = "nil"
 READ = "read"
 EVAL = "eval"
 PRINT = "print"
-IMPORT = "import"
+LOAD = "load"
 
 # special functions
 QUOTE_LONG = "quote"

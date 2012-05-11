@@ -755,7 +755,7 @@ def read(s):
     ensure_type(basestring, s)
     return Cons.build_list(*parse(tokens.tokenize(convert_string(s))))
 
-def import_(fname):
+def load(fname):
     """Read a file and evaluate it into the global scope."""
 
     ensure_type(basestring, fname)
@@ -809,7 +809,7 @@ add_prim = lambda t, f: global_env.put(Symbol(t), PrimitiveFunction(f, name=t))
 
 # repl
 add_prim(tokens.READ, read)
-add_prim(tokens.IMPORT, import_)
+add_prim(tokens.LOAD, load)
 
 # logical
 add_prim(tokens.NOT, not_)

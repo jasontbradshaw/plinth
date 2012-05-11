@@ -1,0 +1,29 @@
+; basic comparison operators
+(define >= (lambda (a b) (or (> a b) (= a b))))
+(define < (lambda (a b) (not (>= a b))))
+(define <= (lambda (a b) (not (> a b))))
+
+; return a list of the passed-in items
+(define list (lambda (items...) items))
+
+; return the length of a proper list
+(define length (lambda (list)
+    (cond ((is? list '()) 0)
+          (#t (+ 1 (len (cdr list)))))))
+
+; return the nth item in a list. if n is less than 0 or out of bounds, errors.
+(define nth (lambda (n list)
+    (cond ((= n 0) (car list))
+          ((>= n 0) (nth (- n 1) (cdr list))))))
+
+; shortcuts for common list accessors
+(define first car)
+(define second (lambda (list) (nth 1 list)))
+(define third (lambda (list) (nth 2 list)))
+(define fourth (lambda (list) (nth 3 list)))
+(define fifth (lambda (list) (nth 4 list)))
+(define sixth (lambda (list) (nth 5 list)))
+(define seventh (lambda (list) (nth 6 list)))
+(define eighth (lambda (list) (nth 7 list)))
+(define ninth (lambda (list) (nth 8 list)))
+(define tenth (lambda (list) (nth 9 list)))

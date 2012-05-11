@@ -741,11 +741,20 @@ def cons(a, b):
 def car(e):
     """Return the first element of a pair."""
     ensure_type(Cons, e)
+
+    # nil isn't allowed to be indexed into, since it has no car or cdr
+    if e is NIL:
+        raise errors.ApplicationError("wrong type for car: " + str(e))
+
     return e.car
 
 def cdr(e):
     """Return the second element of a pair."""
     ensure_type(Cons, e)
+
+    if e is NIL:
+        raise errors.ApplicationError("wrong type for cdr: " + str(e))
+
     return e.cdr
 
 def read(s):

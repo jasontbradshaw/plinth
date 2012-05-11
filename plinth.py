@@ -737,7 +737,8 @@ def car(e):
 
     # nil isn't allowed to be indexed into, since it has no car or cdr
     if e is NIL:
-        raise errors.ApplicationError("wrong type for car: " + str(e))
+        raise errors.WrongArgumentTypeError("wrong argument type for car: " +
+                "expected pair, got " + str(e))
 
     return e.car
 
@@ -746,7 +747,8 @@ def cdr(e):
     ensure_type(Cons, e)
 
     if e is NIL:
-        raise errors.ApplicationError("wrong type for cdr: " + str(e))
+        raise errors.WrongArgumentTypeError("wrong argument type for cdr: " +
+                "expected pair, got " + str(e))
 
     return e.cdr
 

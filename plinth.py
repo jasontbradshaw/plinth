@@ -462,8 +462,8 @@ def parse(token_source):
                 # clear the string buffer in-place
                 del string_buf[:]
 
-        # skip whitespace (one character whitespace implies all are whitespace)
-        elif token[0] in tokens.WHITESPACE:
+        # skip whitespace and comments
+        elif token[0] in tokens.WHITESPACE or token.startswith(tokens.COMMENT):
             pass
 
         # open parenthesis indents

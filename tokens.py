@@ -102,28 +102,30 @@ def tokenize(source):
         # return the contents of the buffer
         return result
 
-    # used to skip comments entirely
-    in_comment = False
-
     # iterate over every character in the source string
     for c in source:
 
-        # skip the comment character and all others until end-of-line
-        if in_comment:
-            # skip all characters until a line separator is encountered
+        # collect all comment characters as one token
+        if len(buf) > 0 and buf[0] == COMMENT:
+            # end the comment once a line separator is encountered
             if c not in LINE_SEPARATORS:
+                buf.append(c)
                 continue
 
-            # turn off comment skipping, parse the character as normal
-            in_comment = False
+            # yield the comment as one token, add the character to the new buf
+            yield flush()
+            buf.append(c)
 
-        # turn on comment skipping, start skipping comment contents
+        # add the first comment character to the buffer
         elif c == COMMENT:
-            in_comment = True
-            continue
+            # clear the buffer of non-comment contents
+            if len(buf) > 0:
+                yield flush()
+
+            buf.append(c)
 
         # match escape characters, for having literal values in strings
-        if c == ESCAPE_CHAR:
+        elif c == ESCAPE_CHAR:
             if len(buf) > 0:
                 yield flush()
             yield c

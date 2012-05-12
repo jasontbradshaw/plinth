@@ -55,9 +55,9 @@ class Atom:
         elif token.lower() == tokens.FALSE:
             return False
 
-        # string (leaves wrapping string tokens intact)
+        # string (strips wrapping string tokens)
         elif token.startswith(tokens.STRING) and token.endswith(tokens.STRING):
-            return token
+            return token[len(tokens.STRING):-len(tokens.STRING)]
 
         # the base case for all tokens is a symbol
         return Symbol(token)
@@ -530,10 +530,6 @@ def ensure_type(required_class, item, *rest):
         if not isinstance(thing, required_class):
             raise errors.WrongArgumentTypeError.build(thing, required_class)
 
-def convert_string(s):
-    """Strips enclosing string tokens from a string and returns the value."""
-    return s[len(tokens.STRING):-len(tokens.STRING)]
-
 def add(a, b, *rest):
     """Adds the all the given numbers together."""
 
@@ -755,13 +751,13 @@ def cdr(e):
 def read(s):
     """Read a string and returns a list of the S-expressions it describes."""
     ensure_type(basestring, s)
-    return Cons.build_list(*parse(tokens.tokenize(convert_string(s))))
+    return Cons.build_list(*parse(tokens.tokenize(s)))
 
 def load(fname):
     """Read a file and evaluate it into the global scope."""
 
     ensure_type(basestring, fname)
-    fname = convert_string(fname)
+    fname = fname
 
     def file_char_iter(f):
         """Iterate over a file one character at a time."""
@@ -1000,6 +996,9 @@ def prettify(item):
 
     if isinstance(item, bool):
         return tokens.TRUE if item else tokens.FALSE
+
+    if isinstance(item, basestring):
+        return tokens.STRING + item + tokens.STRING
 
     return str(item)
 

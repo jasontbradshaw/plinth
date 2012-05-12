@@ -31,12 +31,3 @@
 ; shortcuts for common list accessors
 (define rest cdr)
 (define first car)
-(define second (lambda (list) (nth 1 list)))
-(define third (lambda (list) (nth 2 list)))
-(define fourth (lambda (list) (nth 3 list)))
-(define fifth (lambda (list) (nth 4 list)))
-(define sixth (lambda (list) (nth 5 list)))
-(define seventh (lambda (list) (nth 6 list)))
-(define eighth (lambda (list) (nth 7 list)))
-(define ninth (lambda (list) (nth 8 list)))
-(define tenth (lambda (list) (nth 9 list)))

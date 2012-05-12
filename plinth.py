@@ -62,20 +62,12 @@ class Atom:
         # the base case for all tokens is a symbol
         return Symbol(token)
 
-class Cons(object):
+class Cons:
     """Represents a pair of elements."""
 
     def __init__(self, car, cdr):
-        self.__car = car
-        self.__cdr = cdr
-
-    @property
-    def car(self):
-        return self.__car
-
-    @property
-    def cdr(self):
-        return self.__cdr
+        self.car = car
+        self.cdr = cdr
 
     @staticmethod
     def build_list(*items):
@@ -96,7 +88,7 @@ class Cons(object):
         if item is NIL:
             return ""
 
-        if item.__cdr is NIL:
+        if item.cdr is NIL:
             return str(item.car)
 
         if not isinstance(item.cdr, Cons):
@@ -109,17 +101,17 @@ class Cons(object):
 
     def __repr__(self):
         return (self.__class__.__name__ +
-               "(" + repr(self.__car) + ", " + repr(self.__cdr) + ")")
+               "(" + repr(self.car) + ", " + repr(self.cdr) + ")")
 
     def __len__(self):
         if self is NIL:
             # the nil val is always zero-length
             return 0
-        elif isinstance(self.__cdr, self.__class__):
-            return 1 + len(self.__cdr)
+        elif isinstance(self.cdr, self.__class__):
+            return 1 + len(self.cdr)
         else:
             # not a valid list if cdr isn't of the same class
-            raise errors.WrongArgumentTypeError.build(self.__cdr, self.__class__)
+            raise errors.WrongArgumentTypeError.build(self.cdr, self.__class__)
 
     def __eq__(self, other):
         """Compare recursively."""

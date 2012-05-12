@@ -772,10 +772,6 @@ def load(fname):
     # return that we were successful
     return True
 
-def eval_(sexp):
-    """Evaluate an S-expression in the global scope and return the result."""
-    return evaluate(sexp, global_env)
-
 # these functions serve as markers for whether the function being called is
 # special. we check to see if the function for the symbol is one of these
 # functions, and if so we evaluate it in whatever way it requires. this allows
@@ -789,6 +785,7 @@ define = PrimitiveFunction(lambda symbol, value: None, name=tokens.DEFINE)
 cond = PrimitiveFunction(lambda *e: None, name=tokens.COND)
 and_ = PrimitiveFunction(lambda a, b, *rest: None, name=tokens.AND)
 or_ = PrimitiveFunction(lambda a, b, *rest: None, name=tokens.OR)
+eval_ = PrimitiveFunction(lambda sexp: None, name=tokens.EVAL)
 
 # the base environment for the interpreter
 global_env = Environment(None)
@@ -800,6 +797,7 @@ global_env[Symbol(tokens.DEFINE)] = define
 global_env[Symbol(tokens.COND)] = cond
 global_env[Symbol(tokens.AND)] = and_
 global_env[Symbol(tokens.OR)] = or_
+global_env[Symbol(tokens.EVAL)] = eval_
 
 # adds a new primitive function to the gloval environment
 add_prim = lambda t, f: global_env.put(Symbol(t), PrimitiveFunction(f, name=t))
@@ -981,6 +979,14 @@ def evaluate(item, env):
                     break
 
             return last_item
+
+        # eval
+        elif function is eval_:
+            # TODO: broken, fix it
+            ensure_args(args, 1)
+
+            # evaluate the given s-expression and return it
+            return evaluate(args[0], env)
 
         else:
             # evaluate the arguments normally before passing them to the

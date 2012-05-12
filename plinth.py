@@ -564,7 +564,7 @@ def mul(a, b, *rest):
         ensure_type(NUMBER_TYPES, n)
         product *= n
 
-    return Number.to_number(product)
+    return product
 
 def div(a, b, *rest):
     """Divides the given numbers in sequence."""

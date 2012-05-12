@@ -555,14 +555,14 @@ def mul(a, b, *rest):
     ensure_type(NUMBER_TYPES, a, b)
 
     # multiply all the arguments together while checking type
-    product = a.value * b.value
+    product = a * b
     for n in rest:
         # stop multiplying if the product ever goes to zero
         if product == 0:
             break
 
         ensure_type(NUMBER_TYPES, n)
-        product *= n.value
+        product *= n
 
     return Number.to_number(product)
 

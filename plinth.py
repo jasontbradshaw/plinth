@@ -1010,7 +1010,8 @@ if __name__ == "__main__":
 
     # load all provided files into the global environment on interpreter start
     for fname in sys.argv[1:]:
-        load(fname)
+        if load(fname):
+            print "loaded '" + os.path.abspath(fname) + "'"
 
     while 1:
         try:

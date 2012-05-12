@@ -46,12 +46,9 @@ plinth supports a number of built-in functions.
    a function's argument is `things...`, the function will have access to the
    symbol `things` as a list of all the symbols from that position onwards.
 
- * `read` takes a string and returns a list of expressions as symbol lists.
+ * `read` takes a string and returns a list of expressions parsed from it.
 
  * `eval` takes a list of expressions and evaluates them in the current scope.
-
- * `apply` takes a function and a list of arguments, and calls the function with
-   those arguments.
 
  * `boolean?`, `list?`, `cons?`, `symbol?`, `string?`, `number?`, `integer?`,
    `float?`, `complex?`, and `function?` all take a single argument, and return

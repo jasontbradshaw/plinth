@@ -15,7 +15,7 @@ LIST_TYPES = (list, tuple)
 # language constructs
 #
 
-class Atom(object):
+class Atom:
     """
     Represents anything that's not a list: numbers, strings, symbols, etc.
     """

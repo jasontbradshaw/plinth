@@ -3,6 +3,7 @@
 import math
 import inspect
 import itertools
+import os
 
 import tokens
 import errors
@@ -996,7 +997,6 @@ def prettify(item):
 
 if __name__ == "__main__":
     import sys
-    import os
     import traceback
 
     source = ""

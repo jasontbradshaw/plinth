@@ -1008,6 +1008,10 @@ if __name__ == "__main__":
     print "plinth 0.1"
     print "-----------"
 
+    # load all provided files into the global environment on interpreter start
+    for fname in sys.argv[1:]:
+        load(fname)
+
     while 1:
         try:
             # get input from user and try to tokenize, parse, and print it

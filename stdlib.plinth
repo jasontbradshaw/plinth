@@ -3,20 +3,33 @@
 (define < (lambda (a b) (not (>= a b))))
 (define <= (lambda (a b) (not (> a b))))
 
+; check for nil and define its constant
+(define nil '())
+(define nil? (lambda (x) (is? x nil)))
+
 ; return a list of the passed-in items
 (define list (lambda (items...) items))
 
 ; return the length of a proper list
 (define length (lambda (list)
-    (cond ((is? list '()) 0)
+    (cond ((nil? list) 0)
           (#t (+ 1 (length (cdr list)))))))
 
 ; return the nth item in a list. if n is less than 0 or out of bounds, errors.
 (define nth (lambda (n list)
     (cond ((= n 0) (car list))
-          ((>= n 0) (nth (- n 1) (cdr list))))))
+          ((> n 0) (nth (- n 1) (cdr list))))))
+
+; reverse a list
+(define reverse (lambda (list)
+    (reverse-aux list nil)))
+
+(define reverse-aux (lambda (list accum)
+  (cond ((nil? list) accum)
+        (#t (reverse-aux (rest list) (cons (first list) accum))))))
 
 ; shortcuts for common list accessors
+(define rest cdr)
 (define first car)
 (define second (lambda (list) (nth 1 list)))
 (define third (lambda (list) (nth 2 list)))

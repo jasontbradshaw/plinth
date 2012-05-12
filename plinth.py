@@ -159,6 +159,12 @@ class Symbol(Atom):
 
         Atom.__init__(self, str(value))
 
+    def __hash__(self):
+        return hash(self.value)
+
+    def __eq__(self, other):
+        return isinstance(other, Symbol) and self.value == other.value
+
 class Function(Atom):
     """
     Represents a function in our language. Functions take some number of
@@ -360,15 +366,15 @@ class Environment:
 
     def __getitem__(self, symbol):
         assert isinstance(symbol, Symbol)
-        return self.items[symbol.value]
+        return self.items[symbol]
 
     def __setitem__(self, symbol, value):
         assert isinstance(symbol, Symbol)
-        self.items[symbol.value] = value
+        self.items[symbol] = value
 
     def __contains__(self, symbol):
         assert isinstance(symbol, Symbol)
-        return symbol.value in self.items
+        return symbol in self.items
 
     def __iter__(self):
         return self.items.__iter__()

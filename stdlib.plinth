@@ -9,7 +9,7 @@
 ; return the length of a proper list
 (define length (lambda (list)
     (cond ((is? list '()) 0)
-          (#t (+ 1 (len (cdr list)))))))
+          (#t (+ 1 (length (cdr list)))))))
 
 ; return the nth item in a list. if n is less than 0 or out of bounds, errors.
 (define nth (lambda (n list)

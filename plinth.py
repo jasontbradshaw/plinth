@@ -724,10 +724,10 @@ def lte(a, b):
 def not_(a):
     """
     Returns the opposite boolean of that passed in. All things that aren't #f
-    are #t, so we return the opposite of that.
+    are #t, so we return whether a is False.
     """
 
-    return isinstance(a, bool) and not a
+    return a is False
 
 def cons(a, b):
     """Pair two items."""

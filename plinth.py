@@ -514,7 +514,7 @@ def parse(token_source):
         del scope[i + 1]
 
     # return the canonical abstract syntax tree
-    return Cons.build(*ast)
+    return ast
 
 def ensure_type(required_class, item, *rest):
     """

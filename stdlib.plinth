@@ -1,6 +1,9 @@
 ; not equal
 (define != (lambda (a b) (not (= a b))))
 
+; an element is an atom if it's not a list
+(define atom? (lambda (e) (not (list? e))))
+
 ; check for nil and define its constant
 (define nil '())
 (define nil? (lambda (x) (is? x nil)))

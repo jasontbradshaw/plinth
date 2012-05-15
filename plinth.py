@@ -688,25 +688,17 @@ def equal(a, b):
     if a is b:
         return True
 
-    # numbers are compared mathematically, regardless of type
-    elif isinstance(a, NUMBER_TYPES) and isinstance(b, NUMBER_TYPES):
-        return a == b
-
     # things can't be equal if they're not the same class
     elif not (isinstance(a, b.__class__) and isinstance(b, a.__class__)):
         return False
 
     # we know both args are of the same class now, no need to check both
 
-    # compare cons recursively
-    elif isinstance(a, Cons):
-        return a == b
-
-    # different functions can never be equal, there are too many things to check
+    # different functions can never be equal
     elif isinstance(a, Function):
         return False
 
-    # compare everything else by value (booleans, symbols, etc.)
+    # compare everything else by value (numbers, Cons, symbols, etc.)
     return a == b
 
 def gt(a, b):

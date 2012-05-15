@@ -1,7 +1,5 @@
-; basic comparison operators
-(define >= (lambda (a b) (or (> a b) (= a b))))
-(define < (lambda (a b) (not (>= a b))))
-(define <= (lambda (a b) (not (> a b))))
+; not equal
+(define != (lambda (a b) (not (= a b))))
 
 ; check for nil and define its constant
 (define nil '())

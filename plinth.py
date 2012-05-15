@@ -714,6 +714,21 @@ def gt(a, b):
     ensure_type(NUMBER_TYPES, a, b)
     return a > b
 
+def gte(a, b):
+    """Compare two numbers using '>='."""
+    ensure_type(NUMBER_TYPES, a, b)
+    return a >= b
+
+def lt(a, b):
+    """Compare two numbers using '<'."""
+    ensure_type(NUMBER_TYPES, a, b)
+    return a < b
+
+def lte(a, b):
+    """Compare two numbers using '<='."""
+    ensure_type(NUMBER_TYPES, a, b)
+    return a <= b
+
 def not_(a):
     """
     Returns the opposite boolean of that passed in. All things that aren't #f
@@ -825,6 +840,9 @@ add_prim(tokens.ARCTAN2, atan2)
 add_prim(tokens.IS, is_)
 add_prim(tokens.EQUAL, equal)
 add_prim(tokens.GREATER_THAN, gt)
+add_prim(tokens.GREATER_THAN_EQUAL, gte)
+add_prim(tokens.LESS_THAN, lt)
+add_prim(tokens.LESS_THAN_EQUAL, lte)
 
 # types
 add_prim(tokens.BOOLEANP, booleanp)

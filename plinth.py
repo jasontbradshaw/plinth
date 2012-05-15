@@ -71,14 +71,14 @@ class Cons:
         self.cdr = cdr
 
     @staticmethod
-    def build_list(*items):
+    def build(*items):
         """Build a Cons sequence recursively from some number of items."""
 
         result = NIL
 
         for item in reversed(items):
             if isinstance(item, LIST_TYPES):
-                result = Cons(Cons.build_list(*item), result)
+                result = Cons(Cons.build(*item), result)
             else:
                 result = Cons(item, result)
 
@@ -244,7 +244,7 @@ class Function(Atom):
             # see if we're on the last argument and we have a variadic arg
             if self.vararg is not NIL and i == len(self.arg_symbols) - 1:
                 # map it into the environment with the remaining arg values
-                env[self.vararg] = Cons.build_list(*arg_values[i:])
+                env[self.vararg] = Cons.build(*arg_values[i:])
 
             # add the symbol normally otherwise
             else:
@@ -514,7 +514,7 @@ def parse(token_source):
         del scope[i + 1]
 
     # return the canonical abstract syntax tree
-    return ast
+    return Cons.build(*ast)
 
 def ensure_type(required_class, item, *rest):
     """
@@ -757,7 +757,7 @@ def cdr(e):
 def read(s):
     """Read a string and returns a list of the S-expressions it describes."""
     ensure_type(basestring, s)
-    return Cons.build_list(*parse(tokens.tokenize(s)))
+    return Cons.build(*parse(tokens.tokenize(s)))
 
 def load(fname):
     """Read a file and evaluate it into the global scope."""
@@ -904,7 +904,7 @@ def evaluate(item, env):
 
             # return the argument unevaluated, as a cons if a list
             if isinstance(args[0], LIST_TYPES):
-                return Cons.build_list(*args[0])
+                return Cons.build(*args[0])
 
             return args[0]
 

@@ -754,8 +754,8 @@ def cdr(e):
 
     return e.cdr
 
-def read(s):
-    """Read a string and returns a list of the S-expressions it describes."""
+def parse_(s):
+    """Parse a string into a list of the S-expressions it describes."""
     ensure_type(basestring, s)
     return Cons.build(*parse(tokens.tokenize(s)))
 
@@ -810,7 +810,7 @@ global_env[Symbol(tokens.EVAL)] = eval_
 add_prim = lambda t, f: global_env.put(Symbol(t), PrimitiveFunction(f, name=t))
 
 # repl
-add_prim(tokens.READ, read)
+add_prim(tokens.PARSE, parse_)
 add_prim(tokens.LOAD, load)
 
 # logical

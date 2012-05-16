@@ -22,6 +22,7 @@ NIL = "nil"
 
 # repl
 READ = "read"
+PARSE = "parse"
 EVAL = "eval"
 PRINT = "print"
 LOAD = "load"

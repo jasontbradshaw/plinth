@@ -72,7 +72,7 @@ class Cons:
 
     @staticmethod
     def build(*items):
-        """Build a Cons sequence recursively from some number of items."""
+        """Build a Cons sequence recursively from a nested list structure."""
 
         result = NIL
 
@@ -105,14 +105,11 @@ class Cons:
                "(" + repr(self.car) + ", " + repr(self.cdr) + ")")
 
     def __len__(self):
+        # nil is the empty list
         if self is NIL:
-            # the nil val is always zero-length
             return 0
-        elif isinstance(self.cdr, self.__class__):
-            return 1 + len(self.cdr)
-        else:
-            # not a valid list if cdr isn't of the same class
-            raise errors.WrongArgumentTypeError.build(self.cdr, self.__class__)
+
+        return sum(1 for i in self)
 
     def __eq__(self, other):
         """Compare recursively."""
@@ -125,24 +122,21 @@ class Cons:
 
     def __iter__(self):
         """
-        Yield all the items in the cons sequence in turn. If the final item is
-        nil, None is returned instead.
+        Yield all the items in this cons sequence in turn. If the final item is
+        NIL, it isn't yielded. If the final item is non-NIL, raises an error.
         """
 
         item = self
-
-        # yield the first item of a simple pair if necessary
-        if not isinstance(item.cdr, Cons):
-            yield item.car
-
         while 1:
-            if isinstance(item.cdr, Cons):
+            if item is NIL:
+                # stop if the item is NIL
+                return
+            elif isinstance(item.cdr, Cons):
                 yield item.car
                 item = item.cdr
             else:
-                # yield the final value and give up
-                yield item.cdr
-                break
+                raise errors.WrongArgumentTypeError("not a proper list: " +
+                        str(self))
 
 # the singleton 'nil' value, an empty Cons: we define it here so Cons can use it
 NIL = Cons(None, None)
@@ -181,6 +175,9 @@ class Function(Atom):
         """
 
         assert isinstance(parent, Environment)
+
+        # unroll the cons
+        arg_symbols = [symbol for symbol in arg_symbols]
 
         # all arguments must be symbols
         for item in arg_symbols:
@@ -513,8 +510,8 @@ def parse(token_source):
         scope[i] = [new_symbol, new_item]
         del scope[i + 1]
 
-    # return the canonical abstract syntax tree
-    return ast
+    # return the canonical abstract syntax tree as a Cons list
+    return Cons.build(*ast)
 
 def ensure_type(required_class, item, *rest):
     """
@@ -867,7 +864,7 @@ def ensure_args(arg_list, count, exact=True):
         if len(arg_list) < count:
             raise errors.IncorrectArgumentCountError.build(count, len(arg_list))
 
-def evaluate(item, env):
+def evaluate(sexp, env):
     """
     Given an Atom or list, evaluates it using the given environment
     (global by default) and returns the result as represented in our language
@@ -875,45 +872,42 @@ def evaluate(item, env):
     """
 
     # symbol
-    if isinstance(item, Symbol):
+    if isinstance(sexp, Symbol):
         # look it up in the environment for its value
-        return env.find(item)
+        return env.find(sexp)
 
     # atom (not a literal list)
-    elif not isinstance(item, LIST_TYPES):
+    elif not listp(sexp):
         # it's a generic atom and evaluates to itself
-        return item
+        return sexp
 
     # list
     else:
         # we can't evaluate functions that have nothing in them
-        if len(item) == 0:
+        if len(sexp) == 0:
             raise errors.ApplicationError("nothing to apply")
 
         # evaluate functions using their arguments
-        function = evaluate(item[0], env)
-        args = item[1:]
+        function = evaluate(sexp.car, env)
+        args = sexp.cdr
 
         # make sure our first item evaluated to a function
         if not isinstance(function, Function):
-            raise errors.ApplicationError("wrong type to apply: " + str(function))
+            raise errors.ApplicationError("wrong type to apply: " +
+                    str(function))
 
         # quote
         if function is quote:
+            # return the argument unevaluated
             ensure_args(args, 1)
-
-            # return the argument unevaluated, as a cons if a list
-            if isinstance(args[0], LIST_TYPES):
-                return Cons.build(*args[0])
-
-            return args[0]
+            return args.car
 
         # function
         elif function is lambda_:
             ensure_args(args, 2)
 
-            arg_symbols = args[0]
-            body = args[1]
+            arg_symbols = args.car
+            body = args.cdr
 
             # return a function with the current environment as the parent
             return Function(arg_symbols, body, env)
@@ -922,8 +916,8 @@ def evaluate(item, env):
         elif function is define:
             ensure_args(args, 2)
 
-            symbol = args[0]
-            value = args[1]
+            symbol = args.car
+            value = args.cdr.car
 
             # make sure we're defining to a symbol
             if not isinstance(symbol, Symbol):
@@ -992,19 +986,15 @@ def evaluate(item, env):
 
         # eval
         elif function is eval_:
-            # TODO: broken, fix it
             ensure_args(args, 1)
 
             # evaluate the given s-expression and return it
-            return evaluate(args[0], env)
+            return evaluate(evaluate(args.car, env), env)
 
         else:
             # evaluate the arguments normally before passing them to the
             # function and receiving the result.
             return function(*[evaluate(arg, env) for arg in args])
-
-        # we should never get this far
-        assert False
 
 def prettify(item):
     """Convert certain types into special strings, and all others normally."""

@@ -760,7 +760,6 @@ def load(fname):
     """Read a file and evaluate it into the global scope."""
 
     ensure_type(basestring, fname)
-    fname = fname
 
     def file_char_iter(f):
         """Iterate over a file one character at a time."""

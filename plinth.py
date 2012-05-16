@@ -142,14 +142,10 @@ class Cons:
 NIL = Cons(None, None)
 
 class Symbol(Atom):
-    """
-    Symbols store other values, and evaluate to their stored values.
-    """
+    """Symbols store other values, and evaluate to their stored values."""
 
     def __init__(self, value):
-        """
-        Symbols are stored and looked up by their string names.
-        """
+        """Symbols are stored and looked up by their string names."""
 
         Atom.__init__(self, str(value))
 
@@ -216,17 +212,8 @@ class Function(Atom):
         and return the result.
         """
 
-        # ensure that we've got the correct number of argument values
-        if self.vararg is not NIL:
-            # we only check for the minimum number when variable
-            if len(arg_values) < len(self.arg_symbols) - 1:
-                raise errors.IncorrectArgumentCountError.build(
-                        len(self.arg_symbols) - 1, len(arg_values))
-        else:
-            # we ensure direct correspondence when not variable
-            if len(arg_values) != len(self.arg_symbols):
-                raise errors.IncorrectArgumentCountError.build(
-                        len(self.arg_symbols), len(arg_values))
+        v = self.vararg is not NIL
+        ensure_args(arg_values, len(self.arg_symbols) - 1 if v else 0, not v)
 
         # create a new environment with the parent set as our parent environment
         env = Environment(self.parent)
@@ -292,17 +279,8 @@ class PrimitiveFunction(Function):
         correct number of values was passed in.
         """
 
-        # ensure that we've got the correct number of argument values
-        if self.vararg is not None:
-            # we only check for the minimum number when variable
-            if len(arg_values) < len(self.arg_names) - 1:
-                raise errors.IncorrectArgumentCountError.build(
-                        len(self.arg_names) - 1, len(arg_values))
-        else:
-            # we ensure direct correspondence when not variable
-            if len(arg_values) != len(self.arg_names):
-                raise errors.IncorrectArgumentCountError.build(
-                        self.arg_names, len(arg_values))
+        v = self.vararg is not None
+        ensure_args(arg_values, len(self.arg_names) - 1 if v else 0, not v)
 
         return self.method(*arg_values)
 

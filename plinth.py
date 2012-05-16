@@ -1017,7 +1017,7 @@ if __name__ == "__main__":
     continue_prompt = ": "
     prompt = standard_prompt
 
-    print "plinth 0.1"
+    print "plinth 0.2"
     print "-----------"
 
     # load all provided files into the global environment on interpreter start

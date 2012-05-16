@@ -751,6 +751,11 @@ def cdr(e):
 
     return e.cdr
 
+def read(prompt):
+    """Print the prompt, read input from stdin, and return it as a string."""
+    ensure_type(basestring, prompt)
+    return raw_input(prompt)
+
 def parse_(s):
     """Parse a string into a list of the S-expressions it describes."""
     ensure_type(basestring, s)
@@ -806,6 +811,7 @@ global_env[Symbol(tokens.EVAL)] = eval_
 add_prim = lambda t, f: global_env.put(Symbol(t), PrimitiveFunction(f, name=t))
 
 # repl
+add_prim(tokens.READ, read)
 add_prim(tokens.PARSE, parse_)
 add_prim(tokens.LOAD, load)
 

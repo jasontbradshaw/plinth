@@ -262,7 +262,7 @@ class PrimitiveFunction(Function):
         # add the args and the only variadic arg (if there is one)
         self.arg_names = args
         if vararg is not None:
-            self.arg_names.append(vararg + tokens.VARARG)
+            self.arg_names.append(vararg + " " + tokens.VARARG)
 
     def __str__(self):
         return ("<primitive-function" +

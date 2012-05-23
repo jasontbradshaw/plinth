@@ -180,18 +180,19 @@ class Function(Atom):
             if not isinstance(item, Symbol):
                 raise errors.WrongArgumentTypeError.build(item, Symbol)
 
+        # separate out the vararg if the final symbol uses the vararg token
+        vararg = None
+        if arg_symbols[-1].value == tokens.VARARG:
+            vararg = arg_symbols[-2]
+            del arg_symbols[-1]
+
         self.arg_symbols = arg_symbols
+        self.vararg = vararg
         self.body = body
         self.parent = parent
 
         # can be set by 'define' to name the function
         self.name = name
-
-        # create a normalized argument for a final vararg if there is one
-        self.vararg = NIL
-        if (len(self.arg_symbols) > 0 and
-                self.arg_symbols[-1].value.endswith(tokens.VARARG)):
-            self.vararg = Symbol(self.arg_symbols[-1].value[:-len(tokens.VARARG)])
 
     def __str__(self):
         return ("<function" +
@@ -212,22 +213,22 @@ class Function(Atom):
         and return the result.
         """
 
-        v = self.vararg is not NIL
+        v = self.vararg is not None
         ensure_args(arg_values, len(self.arg_symbols) - 1 if v else 0, not v)
 
         # create a new environment with the parent set as our parent environment
         env = Environment(self.parent)
 
-        # map the vararg to nil by default, to ensure it has a value
-        if self.vararg is not NIL:
+        # map the vararg to nil by default, to ensure it is a list
+        if self.vararg is not None:
             env[self.vararg] = NIL
 
         # put the argument values into the new environment, mapping by position
         for i, (symbol, value) in enumerate(
                 itertools.izip(self.arg_symbols, arg_values)):
             # see if we're on the last argument and we have a variadic arg
-            if self.vararg is not NIL and i == len(self.arg_symbols) - 1:
-                # map it into the environment with the remaining arg values
+            if self.vararg is not None and i == len(self.arg_symbols) - 1:
+                # map it into the environment as the remaining arg values
                 env[self.vararg] = Cons.build(*arg_values[i:])
 
             # add the symbol normally otherwise
@@ -890,7 +891,7 @@ def evaluate(sexp, env):
             ensure_args(args, 2)
 
             arg_symbols = args.car
-            body = args.cdr
+            body = args.cdr.car
 
             # return a function with the current environment as the parent
             return Function(arg_symbols, body, env)

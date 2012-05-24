@@ -26,8 +26,8 @@
     (reverse-aux list nil)))
 
 (define reverse-aux (lambda (list accum)
-  (cond ((nil? list) accum)
-        (#t (reverse-aux (rest list) (cons (first list) accum))))))
+    (cond ((nil? list) accum)
+          (#t (reverse-aux (rest list) (cons (first list) accum))))))
 
 ; shortcuts for common list accessors
 (define rest cdr)

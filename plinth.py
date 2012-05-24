@@ -957,8 +957,8 @@ def evaluate(sexp, env):
                             "2 expressions", len(tup))
 
                 # first and second list items are condition and result
-                condition = tup[0]
-                result = tup[1]
+                condition = tup.car
+                result = tup.cdr.car
 
                 # evaluate and return the result if condition is True
                 if evaluate(condition, env):

@@ -225,8 +225,7 @@ class Function(Atom):
         and return the result.
         """
 
-        v = self.vararg is not None
-        ensure_args(arg_values, len(self.arg_symbols) - 1 if v else 0, not v)
+        ensure_args(arg_values, len(self.arg_symbols), self.vararg is not None)
 
         # create a new environment with the parent set as our parent environment
         env = Environment(self.parent)
@@ -308,8 +307,7 @@ class PrimitiveFunction(Function):
         correct number of values was passed in.
         """
 
-        v = self.vararg is not None
-        ensure_args(arg_values, len(self.arg_names) - 1 if v else 0, not v)
+        ensure_args(arg_values, len(self.arg_names), self.vararg is not None)
 
         return self.method(*arg_values)
 

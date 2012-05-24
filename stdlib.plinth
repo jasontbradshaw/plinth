@@ -62,3 +62,8 @@
 (define cddadr (lambda (x) (cdr (cdadr x))))
 (define cdddar (lambda (x) (cdr (cddar x))))
 (define cddddr (lambda (x) (cdr (cdddr x))))
+
+; map
+(define map (lambda (f list)
+    (cond ((nil? list) nil)
+          (#t (cons (f (first list)) (map f (rest list)))))))

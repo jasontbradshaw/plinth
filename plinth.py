@@ -452,11 +452,6 @@ def div(a, b, *rest):
     # divide all the arguments in sequence while checking type
     quotient = a / b
     for n in rest:
-        # TODO: should this optimization be done? complex? zeros?
-        # stop dividing if the quotient hits zero
-        if quotient == 0:
-            break
-
         ensure_type(NUMBER_TYPES, n)
         quotient /= n
 

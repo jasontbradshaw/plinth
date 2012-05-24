@@ -195,17 +195,29 @@ class Function(Atom):
         self.name = name
 
     def __str__(self):
-        return ("<function" +
-                (" " + self.name if self.name is not None else "") +
-                " (" + ' '.join(map(str, self.arg_symbols)) + ")>")
+        s = "<function"
+
+        if self.name is not None:
+            s += " " + self.name
+
+        s += " ("
+        s += ' '.join(map(str, self.arg_symbols))
+        s += ")>"
+
+        return s
 
     def __repr__(self):
-        return (self.__class__.__name__ + "(" +
-                repr(self.arg_symbols) + ", " +
-                repr(self.body) + ", " +
-                repr(self.parent) +
-                (", name=" + repr(self.name) if self.name is not None else "") +
-                ")")
+        s = self.__class__.__name__ + "("
+        s += repr(self.arg_symbols) + ", "
+        s += repr(self.body) + ", "
+        s += repr(self.parent)
+
+        if self.name is not None:
+            s += ", name=" + repr(self.name)
+
+        s += ")"
+
+        return s
 
     def __call__(self, *arg_values):
         """
@@ -262,17 +274,33 @@ class PrimitiveFunction(Function):
 
         # add the args and the only variadic arg (if there is one)
         self.arg_names = args
-        if vararg is not None:
-            self.arg_names.append(vararg + " " + tokens.VARARG)
 
     def __str__(self):
-        return ("<primitive-function" +
-                (" " + self.name if self.name is not None else "") +
-                " (" + ' '.join(self.arg_names) + ")>")
+        s = "<primitive-function "
+
+        if self.name is not None:
+            s += self.name + " "
+
+        s += "("
+        s += " ".join(self.arg_names)
+
+        if self.vararg is not None:
+            s += " " + self.vararg + " " + tokens.VARARG
+
+        s += ")>"
+
+        return s
 
     def __repr__(self):
-        return (self.__class__.__name__ + "(" + repr(self.method) +
-                (", name=" + self.name if self.name is not None else "") + ")")
+        s = self.__class__.__name__ + "("
+        s += repr(self.method)
+
+        if self.name is not None:
+            s += ", name=" + repr(self.name)
+
+        s += ")"
+
+        return s
 
     def __call__(self, *arg_values):
         """

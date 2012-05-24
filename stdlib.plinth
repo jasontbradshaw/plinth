@@ -67,3 +67,9 @@
 (define map (lambda (f list)
     (cond ((nil? list) nil)
           (#t (cons (f (first list)) (map f (rest list)))))))
+
+; filter
+(define filter (lambda (f list)
+    (cond ((nil? list) nil)
+          ((f (first list)) (cons (first list) (filter f (rest list))))
+          (#t (filter f (rest list))))))

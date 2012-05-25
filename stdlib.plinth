@@ -73,3 +73,8 @@
     (cond ((nil? list) nil)
           ((f (first list)) (cons (first list) (filter f (rest list))))
           (#t (filter f (rest list))))))
+
+; reduce
+(define reduce (lambda (f initial list)
+    (cond ((nil? list) initial)
+          (#t (f (first list) (reduce f initial (rest list)))))))

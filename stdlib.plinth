@@ -9,7 +9,7 @@
 (define nil? (lambda (x) (is? x nil)))
 
 ; return a list of the passed-in items
-(define list (lambda (items ...) items))
+(define list (lambda (items :rest) items))
 
 ; return the length of a proper list
 (define length (lambda (list)

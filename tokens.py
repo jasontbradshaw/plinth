@@ -13,7 +13,8 @@ ESCAPE_CHAR = "\\"
 STRING = '"'
 COMMENT = ";"
 LINE_SEPARATORS = frozenset(["\r", "\n"])
-VARARG = "..."
+VARIADIC_ARG = ":rest"
+OPTIONAL_ARG = ":optional"
 
 # true/false/nil
 TRUE = "#t"

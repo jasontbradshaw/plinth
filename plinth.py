@@ -182,7 +182,7 @@ class Function(Atom):
 
         # separate out the vararg if the final symbol uses the vararg token
         vararg = None
-        if arg_symbols[-1].value == tokens.VARARG:
+        if arg_symbols[-1].value == tokens.VARIADIC_ARG:
             vararg = arg_symbols[-2]
             del arg_symbols[-1]
 
@@ -287,7 +287,7 @@ class PrimitiveFunction(Function):
         s += " ".join(self.arg_names)
 
         if self.vararg is not None:
-            s += " " + self.vararg + " " + tokens.VARARG
+            s += " " + self.vararg + " " + tokens.VARIADIC_ARG
 
         s += ")>"
 

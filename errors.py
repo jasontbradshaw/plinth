@@ -36,8 +36,17 @@ class WrongArgumentTypeError(Exception):
 
     @staticmethod
     def build(arg, expected_class):
+        expected = ""
+        if hasattr(expected_class, "__name__"):
+            expected = expected_class.__name__ + ","
+        else:
+            # support multiple expected classes
+            expected = "one of "
+            expected += ", ".join(map(lambda x: x.__name__, expected_class))
+            expected += ";"
+
         return WrongArgumentTypeError("wrong argument type for " + str(arg) +
-                ": expected " + expected_class.__name__.lower() + ", got " +
+                ": expected " + expected.lower() + " got " +
                 arg.__class__.__name__.lower())
 
 class ApplicationError(Exception):

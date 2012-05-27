@@ -19,7 +19,6 @@ OPTIONAL_ARG = ":optional"
 # true/false/nil
 TRUE = "#t"
 FALSE = "#f"
-NIL = "nil"
 
 # repl
 READ = "read"

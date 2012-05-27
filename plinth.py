@@ -674,6 +674,7 @@ global_env = Environment(None)
 
 # functions that need special treatment during evaluation
 global_env[Symbol(tokens.QUOTE_LONG)] = quote
+global_env[Symbol(tokens.QUASIQUOTE_LONG)] = quasiquote
 global_env[Symbol(tokens.LAMBDA)] = lambda_
 global_env[Symbol(tokens.DEFINE)] = define
 global_env[Symbol(tokens.COND)] = cond
@@ -912,6 +913,32 @@ def evaluate(sexp, env):
             # return the argument unevaluated
             ensure_args(args, 1)
             return args.car
+
+        # quasiquote
+        elif function is quasiquote:
+            ensure_args(args, 1)
+
+            # evaluate unquoted expressions (if any) when given a list
+            if listp(args.car):
+                result = []
+                for arg in args.car:
+                    # default to adding the literal arg
+                    item = arg
+
+                    # evaluate unquoted expressions
+                    if (listp(arg) and len(arg) > 0 and
+                            isinstance(arg.car, Symbol) and
+                            arg.car.value == tokens.UNQUOTE_LONG):
+                        ensure_args(arg.cdr, 1)
+                        item = evaluate(arg.cdr.car, env)
+
+                    result.append(item)
+
+                # return the semi-evaluated arguments
+                return Cons.build(*result)
+            else:
+                # same as quote if the arg isn't a list
+                return args.car
 
         # function
         elif function is lambda_:

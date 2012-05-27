@@ -918,26 +918,51 @@ def evaluate(sexp, env):
         elif function is quasiquote:
             ensure_args(args, 1)
 
+            # NOTE: this is the only place that the 'unquote' and
+            # 'unquote-splicing' tokens are treated as valid. they simply
+            # resolve to undefined symbols otherwise.
+
             # evaluate unquoted expressions (if any) when given a list
             if listp(args.car):
                 result = []
                 for arg in args.car:
-                    # default to adding the literal arg
+                    # the item we'll add, and whether to extend the result with
+                    # it instead of just adding it to the end.
                     item = arg
+                    extend = False
 
-                    # evaluate unquoted expressions
-                    if (listp(arg) and len(arg) > 0 and
-                            isinstance(arg.car, Symbol) and
-                            arg.car.value == tokens.UNQUOTE_LONG):
-                        ensure_args(arg.cdr, 1)
-                        item = evaluate(arg.cdr.car, env)
+                    # evaluate unquoted and/or spliced expressions
+                    if listp(arg) and len(arg) > 0 and isinstance(arg.car, Symbol):
+                        # unquote
+                        if arg.car.value == tokens.UNQUOTE_LONG:
+                            ensure_args(arg.cdr, 1)
+                            item = evaluate(arg.cdr.car, env)
 
-                    result.append(item)
+                        # unquote-splicing
+                        elif arg.car.value == tokens.UNQUOTE_SPLICING_LONG:
+                            ensure_args(arg.cdr, 1)
+                            item = evaluate(arg.cdr.car, env)
+
+                            # ensure we got a list to splice with
+                            if not listp(item):
+                                raise errors.WrongArgumentTypeError(
+                                        "wrong argument type for " +
+                                        str(item) + ": " +
+                                        "expected argument of type " +
+                                        "proper-list, got: " +
+                                        item.__class__.__name__.lower())
+
+                            # add all the members of the list to the result
+                            extend = True
+
+                    # append or extend the result with the item
+                    result.extend(item) if extend else result.append(item)
 
                 # return the semi-evaluated arguments
                 return Cons.build(*result)
+
             else:
-                # same as quote if the arg isn't a list
+                # quasiquote functions the same as quote if the arg isn't a list
                 return args.car
 
         # function

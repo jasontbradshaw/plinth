@@ -8,6 +8,7 @@ CLOSE_PAREN = ")"
 QUOTE = "'"
 QUASIQUOTE = "`"
 UNQUOTE = ","
+UNQUOTE_SPLICING = "@"
 WHITESPACE = frozenset([" ", "\t", "\n", "\r", "\f", "\v"])
 ESCAPE_CHAR = "\\"
 STRING = '"'
@@ -31,6 +32,7 @@ LOAD = "load"
 QUOTE_LONG = "quote"
 QUASIQUOTE_LONG = "quasiquote"
 UNQUOTE_LONG = "unquote"
+UNQUOTE_SPLICING_LONG = "unquote-splicing"
 LAMBDA = "lambda"
 DEFINE = "define"
 COND = "cond"
@@ -81,7 +83,8 @@ CDR = "cdr"
 SUGAR = {
     QUOTE: QUOTE_LONG,
     UNQUOTE: UNQUOTE_LONG,
-    QUASIQUOTE: QUASIQUOTE_LONG
+    QUASIQUOTE: QUASIQUOTE_LONG,
+    UNQUOTE_SPLICING: UNQUOTE_SPLICING_LONG
 }
 
 def tokenize(source):

@@ -876,6 +876,62 @@ def parse(token_source):
     # return the canonical abstract syntax tree as a Cons list
     return Cons.build(*ast)
 
+def quasiquote_evaluate(sexp, env, level=0):
+    """
+    Evaluates a nested list of S-expressions and returns the unquoted and
+    spliced version as a list of S-expressions. Handles quasiquote nesting.
+    """
+
+    # NOTE: this is the only place that the 'unquote' and
+    # 'unquote-splicing' tokens are treated as valid. they simply
+    # resolve to undefined symbols everywhere else.
+
+    # don't do anything fancy with non-lists
+    if not listp(sexp):
+        return sexp
+
+    # evaluate unquoted expressions (if any) when given a list
+    result = []
+    for item in sexp:
+        if listp(item) and len(item) > 0 and isinstance(item.car, Symbol):
+            # quasiquote
+            if item.car.value == tokens.QUASIQUOTE_LONG:
+                # further nesting always preserves the quasiquote expression
+                ensure_args(item.cdr, 1)
+                result.append(quasiquote_evaluate(item, env, level + 1))
+
+            # unquote
+            elif item.car.value == tokens.UNQUOTE_LONG:
+                ensure_args(item.cdr, 1)
+
+                if level == 0:
+                    # evaluate item directly if we're fully unquoted
+                    a = evaluate(item.cdr.car, env)
+                else:
+                    # otherwise, nest a deeper quasiquote and leave this alone
+                    a = quasiquote_evaluate(item, env, level - 1)
+
+                result.append(a)
+
+            # unquote-splicing
+            elif item.car.value == tokens.UNQUOTE_SPLICING_LONG:
+                ensure_args(item.cdr, 1)
+                if level == 0:
+                    result.extend(evaluate(item.cdr.car, env))
+                else:
+                    result.append(quasiquote_evaluate(item, env, level - 1))
+
+            # normal lists
+            else:
+                # qq-evaluate the item at the current level of nesting, add it
+                result.append(quasiquote_evaluate(item, env, level))
+        else:
+            # not a list, length is 0, or first item isn't a symbol
+            result.append(quasiquote_evaluate(item, env, level))
+
+    # return the semi-evaluated arguments as a list
+    return Cons.build(*result)
+
 def evaluate(sexp, env):
     """
     Given an Atom or list, evaluates it using the given environment
@@ -917,53 +973,7 @@ def evaluate(sexp, env):
         # quasiquote
         elif function is quasiquote:
             ensure_args(args, 1)
-
-            # NOTE: this is the only place that the 'unquote' and
-            # 'unquote-splicing' tokens are treated as valid. they simply
-            # resolve to undefined symbols otherwise.
-
-            # evaluate unquoted expressions (if any) when given a list
-            if listp(args.car):
-                result = []
-                for arg in args.car:
-                    # the item we'll add, and whether to extend the result with
-                    # it instead of just adding it to the end.
-                    item = arg
-                    extend = False
-
-                    # evaluate unquoted and/or spliced expressions
-                    if listp(arg) and len(arg) > 0 and isinstance(arg.car, Symbol):
-                        # unquote
-                        if arg.car.value == tokens.UNQUOTE_LONG:
-                            ensure_args(arg.cdr, 1)
-                            item = evaluate(arg.cdr.car, env)
-
-                        # unquote-splicing
-                        elif arg.car.value == tokens.UNQUOTE_SPLICING_LONG:
-                            ensure_args(arg.cdr, 1)
-                            item = evaluate(arg.cdr.car, env)
-
-                            # ensure we got a list to splice with
-                            if not listp(item):
-                                raise errors.WrongArgumentTypeError(
-                                        "wrong argument type for " +
-                                        str(item) + ": " +
-                                        "expected argument of type " +
-                                        "proper-list, got: " +
-                                        item.__class__.__name__.lower())
-
-                            # add all the members of the list to the result
-                            extend = True
-
-                    # append or extend the result with the item
-                    result.extend(item) if extend else result.append(item)
-
-                # return the semi-evaluated arguments
-                return Cons.build(*result)
-
-            else:
-                # quasiquote functions the same as quote if the arg isn't a list
-                return args.car
+            return quasiquote_evaluate(args.car, env, 0)
 
         # function
         elif function is lambda_:

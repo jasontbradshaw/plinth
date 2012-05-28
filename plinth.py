@@ -202,6 +202,10 @@ class Function(Atom):
 
         s += " ("
         s += ' '.join(map(str, self.arg_symbols))
+
+        if self.vararg is not None:
+            s += " " + tokens.VARIADIC_ARG
+
         s += ")>"
 
         return s

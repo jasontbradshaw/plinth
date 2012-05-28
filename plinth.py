@@ -13,6 +13,37 @@ NUMBER_TYPES = (int, long, float, complex)
 LIST_TYPES = (list, tuple)
 
 #
+# useful functions
+#
+
+def ensure_type(required_class, item, *rest):
+    """
+    Raises a WrongArgumentTypeError if all the items aren't instances of the
+    required class/classes tuple.
+    """
+
+    if not isinstance(item, required_class):
+        raise errors.WrongArgumentTypeError.build(item, required_class)
+
+    for thing in rest:
+        if not isinstance(thing, required_class):
+            raise errors.WrongArgumentTypeError.build(thing, required_class)
+
+def ensure_args(arg_list, count, exact=True):
+    """
+    Ensures that an argument list contains a number of arguments. When exact is
+    True (the default), ensures that the count is exactly that provided. When
+    exact is False, ensures that the count is at least the number provided.
+    """
+
+    if exact:
+        if len(arg_list) != count:
+            raise errors.IncorrectArgumentCountError.build(count, len(arg_list))
+    else:
+        if len(arg_list) < count:
+            raise errors.IncorrectArgumentCountError.build(count, len(arg_list))
+
+#
 # language constructs
 #
 
@@ -390,19 +421,6 @@ class Environment:
 # interpreter
 #
 
-def ensure_type(required_class, item, *rest):
-    """
-    Raises a WrongArgumentTypeError if all the items aren't instances of the
-    required class/classes tuple.
-    """
-
-    if not isinstance(item, required_class):
-        raise errors.WrongArgumentTypeError.build(item, required_class)
-
-    for thing in rest:
-        if not isinstance(thing, required_class):
-            raise errors.WrongArgumentTypeError.build(thing, required_class)
-
 def add(a, b, *rest):
     """Adds the all the given numbers together."""
 
@@ -727,20 +745,6 @@ add_prim(tokens.FUNCTIONP, functionp)
 add_prim(tokens.CONS, cons)
 add_prim(tokens.CAR, car)
 add_prim(tokens.CDR, cdr)
-
-def ensure_args(arg_list, count, exact=True):
-    """
-    Ensures that an argument list contains a number of arguments. When exact is
-    True (the default), ensures that the count is exactly that provided. When
-    exact is False, ensures that the count is at least the number provided.
-    """
-
-    if exact:
-        if len(arg_list) != count:
-            raise errors.IncorrectArgumentCountError.build(count, len(arg_list))
-    else:
-        if len(arg_list) < count:
-            raise errors.IncorrectArgumentCountError.build(count, len(arg_list))
 
 def parse(token_source):
     """

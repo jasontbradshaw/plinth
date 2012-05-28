@@ -333,6 +333,9 @@ class Environment:
         variables.
         """
 
+        # None means no parent, otherwise must be an environment
+        assert parent is None or isinstance(parent, Environment)
+
         # the environment that contains this environment
         self.parent = parent
 
@@ -352,18 +355,10 @@ class Environment:
 
         if symbol in self:
             return self[symbol]
-        elif isinstance(self.parent, Environment):
+        elif self.parent is not None:
             return self.parent.find(symbol)
-        else:
-            raise errors.SymbolNotFoundError.build(symbol)
 
-    def update(self, other_dict):
-        """
-        Copy all the values in another dict into the environment.
-        """
-
-        for key in other_dict:
-            self[key] = other_dict[key]
+        raise errors.SymbolNotFoundError.build(symbol)
 
     def put(self, symbol, value):
         """Shortcut for setting symbols to values."""
@@ -390,7 +385,6 @@ class Environment:
 
     def __iter__(self):
         return self.items.__iter__()
-
 
 #
 # interpreter

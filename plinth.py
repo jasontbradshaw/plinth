@@ -278,7 +278,7 @@ class PrimitiveFunction(Function):
         # set the variadic argument (None if there wasn't one, else the arg)
         self.vararg = vararg
 
-        # add the args and the only variadic arg (if there is one)
+        # add the args
         self.arg_names = args
 
     def __str__(self):

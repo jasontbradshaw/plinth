@@ -1,9 +1,11 @@
 #!/usr/bin/env python
 
+import collections
 import math
 import inspect
 import itertools
 import os
+import threading
 
 import tokens
 import errors
@@ -42,6 +44,22 @@ def ensure_args(arg_list, count, exact=True):
     else:
         if len(arg_list) < count:
             raise errors.IncorrectArgumentCountError.build(count, len(arg_list))
+
+class ThreadSafeCounter:
+    """When called, returns increasing ints in order."""
+
+    def __init__(self, count=0):
+        self.count = count
+        self.lock = threading.Lock()
+
+    def __call__(self):
+        with self.lock:
+            c = self.count
+            self.count += 1
+            return c
+
+# used to get generate guaranteed-unique symbol names
+GENSYM_COUNTER = ThreadSafeCounter()
 
 #
 # language constructs
@@ -213,7 +231,7 @@ class Function(Atom):
 
         # separate out the vararg if the final symbol uses the vararg token
         vararg = None
-        if arg_symbols[-1].value == tokens.VARIADIC_ARG:
+        if len(arg_symbols) > 1 and arg_symbols[-1].value == tokens.VARIADIC_ARG:
             vararg = arg_symbols[-2]
             del arg_symbols[-1]
 
@@ -351,6 +369,89 @@ class PrimitiveFunction(Function):
         ensure_args(arg_values, num_args, self.vararg is None)
 
         return self.method(*arg_values)
+
+class Macro(Atom):
+    """
+    A code-rewriting construct. A macro takes code and returns (expands) code
+    dynamically at runtime. Arguments aren't evaluated before being inserted
+    into the macro body.
+    """
+
+    def __init__(self, arg_symbols, body, name=None):
+
+        # unroll arg symbols cons into a normal list so we can edit it
+        unrolled = []
+        for item in arg_symbols:
+            if not isinstance(item, Symbol):
+                raise errors.WrongArgumentTypeError.build(item, Symbol)
+            unrolled.append(item)
+        arg_symbols = unrolled
+
+        # handle any variadic arg
+        vararg = None
+        if len(arg_symbols) > 1 and arg_symbols[-1].value == tokens.VARIADIC_ARG:
+            vararg = arg_symbols[-2]
+            del arg_symbols[-1]
+
+        self.arg_symbols = arg_symbols
+        self.vararg = vararg
+        self.body = body
+        self.name = name
+
+    def __str__(self):
+        s = "<macro"
+
+        if self.name is not None:
+            s += " " + self.name
+
+        s += " ("
+        s += ' '.join(map(str, self.arg_symbols))
+
+        if self.vararg is not None:
+            s += " " + tokens.VARIADIC_ARG
+
+        s += ")>"
+
+        return s
+
+    def __repr__(self):
+        s = self.__class__.__name__ + "("
+        s += repr(self.arg_symbols) + ", "
+        s += repr(self.body)
+
+        if self.name is not None:
+            s += ", name=" + repr(self.name)
+
+        s += ")"
+
+        return s
+
+    def __call__(self, env, *arg_sexps):
+        """
+        Expand the macro's body in some environment using the given argument
+        expressions.
+        """
+
+        num_args = len(self.arg_symbols)
+        if self.vararg is not None:
+            num_args -= 1
+        ensure_args(arg_sexps, num_args, self.vararg is None)
+
+        # map symbols to their replacement expressions in a new environment
+        expand_env = Environment(env)
+        for i, (symbol, value) in enumerate(
+                itertools.izip(self.arg_symbols, arg_sexps)):
+            # see if we're on the last argument and we have a variadic arg
+            if self.vararg is not None and i == len(self.arg_symbols) - 1:
+                # map it into the environment as the remaining arg values
+                expand_env[self.vararg] = Cons.build(*arg_sexps[i:])
+
+            # add the symbol normally otherwise
+            else:
+                expand_env[symbol] = value
+
+        # evaluate our body in the created environment
+        return evaluate(self.body, expand_env)
 
 class Environment:
     """
@@ -679,6 +780,8 @@ quote = PrimitiveFunction(lambda e: None, name=tokens.QUOTE_LONG)
 unquote = PrimitiveFunction(lambda e: None, name=tokens.UNQUOTE_LONG)
 quasiquote = PrimitiveFunction(lambda e: None, name=tokens.QUASIQUOTE_LONG)
 lambda_ = PrimitiveFunction(lambda args, body: None, name=tokens.LAMBDA)
+macro = PrimitiveFunction(lambda args, body: None, name=tokens.MACRO)
+expand = PrimitiveFunction(lambda macro, *args: None, name=tokens.MACRO_EXPAND)
 define = PrimitiveFunction(lambda symbol, value: None, name=tokens.DEFINE)
 cond = PrimitiveFunction(lambda *e: None, name=tokens.COND)
 and_ = PrimitiveFunction(lambda a, b, *rest: None, name=tokens.AND)
@@ -692,6 +795,8 @@ global_env = Environment(None)
 global_env[Symbol(tokens.QUOTE_LONG)] = quote
 global_env[Symbol(tokens.QUASIQUOTE_LONG)] = quasiquote
 global_env[Symbol(tokens.LAMBDA)] = lambda_
+global_env[Symbol(tokens.MACRO)] = macro
+global_env[Symbol(tokens.MACRO_EXPAND)] = expand
 global_env[Symbol(tokens.DEFINE)] = define
 global_env[Symbol(tokens.COND)] = cond
 global_env[Symbol(tokens.AND)] = and_
@@ -880,13 +985,16 @@ def parse(token_source):
 
 def quasiquote_evaluate(sexp, env, level=0):
     """
-    Evaluates a nested list of S-expressions and returns the unquoted and
-    spliced version as a list of S-expressions. Handles quasiquote nesting.
+    Traverses a nested list of S-expressions and evaluates unquoted or spliced
+    sections before returning the traversed structure. Handles quasiquote
+    nesting.
     """
 
     # NOTE: this is the only place that the 'unquote' and
     # 'unquote-splicing' tokens are treated as valid. they simply
     # resolve to undefined symbols everywhere else.
+
+    assert level >= 0
 
     # don't do anything fancy with non-lists
     if not listp(sexp):
@@ -962,7 +1070,7 @@ def evaluate(sexp, env):
         args = sexp.cdr
 
         # make sure our first item evaluated to a function
-        if not isinstance(function, Function):
+        if not isinstance(function, (Function, Macro)):
             raise errors.ApplicationError("wrong type to apply: " +
                     str(function))
 
@@ -975,7 +1083,7 @@ def evaluate(sexp, env):
         # quasiquote
         elif function is quasiquote:
             ensure_args(args, 1)
-            return quasiquote_evaluate(args.car, env, 0)
+            return quasiquote_evaluate(args.car, env)
 
         # function
         elif function is lambda_:
@@ -986,6 +1094,25 @@ def evaluate(sexp, env):
 
             # return a function with the current environment as the parent
             return Function(arg_symbols, body, env)
+
+        # macro
+        elif function is macro:
+            ensure_args(args, 2)
+
+            arg_symbols = args.car
+            body = args.cdr.car
+
+            # return a macro with the given symbols and body
+            return Macro(arg_symbols, body)
+
+        # macro expand
+        elif function is expand:
+            ensure_args(args, 1, exact=False)
+
+            m = evaluate(args.car, env)
+            arg_expressions = args.cdr
+
+            return m(env, *arg_expressions)
 
         # define
         elif function is define:
@@ -1005,9 +1132,9 @@ def evaluate(sexp, env):
             result = evaluate(value, env)
             env[symbol] = result
 
-            # set a function name if one isn't set yet
-            if isinstance(result, Function) and result.name is None:
-                result.name = symbol.value
+            # set a function or macro name if one isn't set yet
+            if isinstance(result, (Function, Macro)) and result.name is None:
+                    result.name = symbol.value
 
             return result
 
@@ -1066,9 +1193,13 @@ def evaluate(sexp, env):
             # evaluate the given s-expression and return it
             return evaluate(evaluate(args.car, env), env)
 
+        # evaluate macros
+        elif isinstance(function, Macro):
+            # evaluate the expanded form of the macro in the current environment
+            return evaluate(function(env, *args), env)
+
         else:
-            # evaluate the arguments normally before passing them to the
-            # function and receiving the result.
+            # evaluate args and call the function with them
             return function(*[evaluate(arg, env) for arg in args])
 
 def prettify(item):

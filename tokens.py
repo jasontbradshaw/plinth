@@ -34,6 +34,8 @@ QUASIQUOTE_LONG = "quasiquote"
 UNQUOTE_LONG = "unquote"
 UNQUOTE_SPLICING_LONG = "unquote-splicing"
 LAMBDA = "lambda"
+MACRO = "macro"
+MACRO_EXPAND = "expand"
 DEFINE = "define"
 COND = "cond"
 

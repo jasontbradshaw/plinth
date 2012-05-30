@@ -28,7 +28,7 @@ plinth supports lots of built-in functionality.
 
  * `quote` (equivalently `'`) returns its only argument as a literal value.
 
- * `quasiquote` (equivalently `\``) functions the same as `quote` while allowing
+ * `quasiquote` (equivalently `` `) functions the same as `quote` while allowing
    selective evaluation of its quoted contents via `unquote` (equivalently `,`),
    and list-replacement via `unquote-splicing` (equivalently `^`).
 

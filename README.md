@@ -4,29 +4,33 @@ plinth
 plinth is a simple purely-functional Lisp-like language with an interpreter
 written in Python.
 
-plinth features lexical closure, first-class functions, quoting, as well as all
-the standard math operations one could want.
+plinth features lexical closure, first-class functions, quoting, macros, as well
+as all the standard math operations one could want.
 
 Usage
 ----
 
-To run plinth, you'll need Python installed. Simply run `python plinth.py`
-from the root directory, and you'll be in business. You can load the in-
-progress standard library by passing its filename (stdlib.plinth) into the
-interpreter as an argument.
+To run plinth, you'll need a modern version of Python installed (developed on
+2.7.x). Simply run `python plinth.py` from the root directory, and you'll be in
+business. You can load the in- progress standard library by passing its filename
+(`stdlib.plinth`) into the interpreter as an argument.
 
 Reference
 ----
-plinth supports a number of built-in functions.
+plinth supports lots of built-in functionality.
 
  * `define` gives symbols values in the current scope. It takes as its arguments
    a symbol name and a value, and assigns the symbol to the given value.
 
  * `cons` is the basic data-concatenation function in plinth. `cons` takes as
    its arguments two symbols, and returns them as a pair. The empty cons, `()`,
-   is known as 'nil', and is used to mark the end of lists.
+   is known as 'nil' and is used to mark the end of lists.
 
  * `quote` (equivalently `'`) returns its only argument as a literal value.
+
+ * `quasiquote` (equivalently `\``) functions the same as `quote` while allowing
+   selective evaluation of its quoted contents via `unquote` (equivalently `,`),
+   and list-replacement via `unquote-splicing` (equivalently `^`).
 
  * `cond` takes as its arguments a list of lists containing expressions. For
    every list, if the first element evaluates to `#t`, then the second element
@@ -51,7 +55,8 @@ plinth supports a number of built-in functions.
  * `macro` returns a macro. It takes as its parameters a list of symbols and a
    body to evaluate with the symbols replaced with the unevaluated parameters to
    the macro call. Used to extend the language by constructing syntax that is
-   subsequently evaluated.
+   subsequently evaluated. Macros are always expanded using the values of the
+   environment they're expanded in.
 
  * `expand` takes a macro and some arguments to be passed to it, and returns the
    expanded form of the macro using the given arguments.

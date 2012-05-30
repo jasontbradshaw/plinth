@@ -48,6 +48,14 @@ plinth supports a number of built-in functions.
    a function's arguments are `things ...`, the function will have access to the
    symbol `things` as a list of all the symbols from that position onwards.
 
+ * `macro` returns a macro. It takes as its parameters a list of symbols and a
+   body to evaluate with the symbols replaced with the unevaluated parameters to
+   the macro call. Used to extend the language by constructing syntax that is
+   subsequently evaluated.
+
+ * `expand` takes a macro and some arguments to be passed to it, and returns the
+   expanded form of the macro using the given arguments.
+
  * `read` takes a string and returns a list of expressions parsed from it.
 
  * `eval` takes a list of expressions and evaluates them in the current scope.

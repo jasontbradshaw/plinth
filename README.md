@@ -26,7 +26,7 @@ plinth supports lots of built-in functionality.
    its arguments two symbols, and returns them as a pair. The empty cons, `()`,
    is known as 'nil' and is used to mark the end of lists.
 
- * `quote` (equivalently `'`) returns its only argument as a literal value.
+ * `quote` (equivalently `` ` ``) returns its only argument as a literal value.
 
  * `quasiquote` (equivalently `` `) functions the same as `quote` while allowing
    selective evaluation of its quoted contents via `unquote` (equivalently `,`),

@@ -771,6 +771,16 @@ def load(fname):
     # return that we were successful
     return True
 
+def gensym(prefix):
+    """
+    Generate a unique symbol with the given prefix in its name. Generated
+    symbols have names that contain syntax elements, and hence can't be entered
+    via the reader.
+    """
+    ensure_type(basestring, prefix)
+    return Symbol(prefix + tokens.OPEN_PAREN + str(GENSYM_COUNTER()) +
+            tokens.CLOSE_PAREN)
+
 # these functions serve as markers for whether the function being called is
 # special. we check to see if the function for the symbol is one of these
 # functions, and if so we evaluate it in whatever way it requires. this allows
@@ -850,6 +860,9 @@ add_prim(tokens.FUNCTIONP, functionp)
 add_prim(tokens.CONS, cons)
 add_prim(tokens.CAR, car)
 add_prim(tokens.CDR, cdr)
+
+# meta
+add_prim(tokens.GENERATE_SYMBOL, gensym)
 
 def parse(token_source):
     """

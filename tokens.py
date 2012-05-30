@@ -36,6 +36,7 @@ UNQUOTE_SPLICING_LONG = "unquote-splicing"
 LAMBDA = "lambda"
 MACRO = "macro"
 MACRO_EXPAND = "expand"
+GENERATE_SYMBOL = "gensym"
 DEFINE = "define"
 COND = "cond"
 

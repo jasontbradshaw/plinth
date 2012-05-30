@@ -44,8 +44,8 @@ plinth supports a number of built-in functions.
    use as arguments, and an expression to execute over the given argument
    symbols.  Functions are closed over the current scope, and carry their parent
    scope with them for their lifetime. Functions can receive variadic arguments
-   by using the special `:rest` postfix symbol after symbol names. For example, if
-   a function's arguments are `things :rest`, the function will have access to the
+   by using the special `...` postfix symbol after symbol names. For example, if
+   a function's arguments are `things ...`, the function will have access to the
    symbol `things` as a list of all the symbols from that position onwards.
 
  * `read` takes a string and returns a list of expressions parsed from it.

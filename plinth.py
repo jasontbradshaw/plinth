@@ -1122,9 +1122,9 @@ def evaluate(sexp, env):
         elif function is expand:
             ensure_args(args, 1, exact=False)
 
-            # evaluate to get the macro, but don't evaluate the arguments
+            # evaluate to get the macro and its arguments
             m = evaluate(args.car, env)
-            arg_expressions = args.cdr
+            arg_expressions = [evaluate(arg, env) for arg in args.cdr]
 
             # make sure we got a macro
             ensure_type(Macro, m)

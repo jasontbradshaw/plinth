@@ -49,6 +49,12 @@
 (defmac let (sym-vals body)
     `((lambda (^(map car sym-vals)) ,body) ^(map cadr sym-vals)))
 
+; recursive let
+(defmac letrec (sym-vals body)
+    (if (= 1 (length sym-vals))
+        `(let (,(first sym-vals)) ,body)
+        `(let (,(first sym-vals)) (letrec ,(rest sym-vals) ,body))))
+
 ; not equal
 (defun != (a b) (not (= a b)))
 

@@ -133,21 +133,21 @@ class Cons:
 
         return result
 
-    def __str_helper(self, item):
+    def __str_helper(self, item, str_fun):
         # nil has no contents
         if item is NIL:
             return ""
 
         if item.cdr is NIL:
-            return str(item.car)
+            return str_fun(item.car)
 
         if not isinstance(item.cdr, Cons):
-            return str(item.car) + " . " + str(item.cdr)
+            return str_fun(item.car) + " . " + str_fun(item.cdr)
 
-        return str(item.car) + " " + self.__str_helper(item.cdr)
+        return str_fun(item.car) + " " + self.__str_helper(item.cdr)
 
-    def __str__(self):
-        return "(" + self.__str_helper(self) + ")"
+    def __str__(self, str_fun=str):
+        return "(" + self.__str_helper(self, str_fun) + ")"
 
     def __repr__(self):
         return (self.__class__.__name__ +
@@ -1226,6 +1226,9 @@ def prettify(item):
 
     if isinstance(item, basestring):
         return tokens.STRING + item + tokens.STRING
+
+    if isinstance(item, Cons):
+        return item.__str__(prettify)
 
     return str(item)
 

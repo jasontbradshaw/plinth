@@ -161,7 +161,7 @@ class Cons:
         return sum(1 for i in self)
 
     def __eq__(self, other):
-        """Compare recursively."""
+        """Compare recursively to another iterable."""
 
         for si, oi in itertools.izip(self, other):
             if si != oi:

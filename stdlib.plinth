@@ -45,6 +45,22 @@
     `(cond (,test ,true-body)
            (#t ,false-body)))
 
+; nil
+(define nil '())
+
+; types and helpful type checkers
+(defun nil? (x) (is? x nil))
+(defun symbol? (e) (= (type e) "symbol"))
+(defun string? (e) (= (type e) "string"))
+(defun integer? (e) (= (type e) "integer"))
+(defun float? (e) (= (type e) "float"))
+(defun complex? (e) (= (type e) "complex"))
+(defun number? (e) (or (integer? e) (float? e) (complex? e)))
+(defun cons? (e) (= (type e) "cons"))
+(defun function? (e) (= (type e) "function"))
+(defun macro? (e) (= (type e) "macro"))
+(defun callable? (e) (or (function? e) (macro? e)))
+
 ; let
 (defmac let (sym-vals body)
     `((lambda (^(map car sym-vals)) ,body) ^(map cadr sym-vals)))
@@ -57,10 +73,6 @@
 
 ; not equal
 (defun != (a b) (not (= a b)))
-
-; check for nil and define its constant
-(define nil '())
-(defun nil? (x) (is? x nil))
 
 ; an element is an atom if it's not a list
 (defun atom? (e) (not (list? e)))

@@ -2,7 +2,10 @@
 # also contains the tokenize function for generating a stream of tokens from
 # some string input.
 
-# base syntactic constructs
+#
+# syntactic constructs
+#
+
 OPEN_PAREN = "("
 CLOSE_PAREN = ")"
 QUOTE = "'"
@@ -16,7 +19,20 @@ COMMENT = ";"
 LINE_SEPARATORS = frozenset(["\r", "\n"])
 VARIADIC_ARG = "..."
 
-# true/false/nil
+#
+# functions
+#
+
+# general
+LAMBDA = "lambda"
+MACRO = "macro"
+MACRO_EXPAND = "expand"
+GENERATE_SYMBOL = "gensym"
+DEFINE = "define"
+COND = "cond"
+TYPE = "type"
+
+# boolean symbols
 TRUE = "#t"
 FALSE = "#f"
 
@@ -24,20 +40,13 @@ FALSE = "#f"
 READ = "read"
 PARSE = "parse"
 EVAL = "eval"
-PRINT = "print"
 LOAD = "load"
 
-# special functions
+# quoting
 QUOTE_LONG = "quote"
 QUASIQUOTE_LONG = "quasiquote"
 UNQUOTE_LONG = "unquote"
 UNQUOTE_SPLICING_LONG = "unquote-splicing"
-LAMBDA = "lambda"
-MACRO = "macro"
-MACRO_EXPAND = "expand"
-GENERATE_SYMBOL = "gensym"
-DEFINE = "define"
-COND = "cond"
 
 # math
 ADD = "+"
@@ -63,18 +72,6 @@ LESS_THAN_EQUAL = "<="
 AND = "and"
 OR = "or"
 NOT = "not"
-
-# type predicates
-BOOLEANP = "boolean?"
-CONSP = "cons?"
-LISTP = "list?"
-SYMBOLP = "symbol?"
-STRINGP = "string?"
-NUMBERP = "number?"
-INTEGERP = "integer?"
-FLOATP = "float?"
-COMPLEXP = "complex?"
-FUNCTIONP = "function?"
 
 # cons
 CONS = "cons"

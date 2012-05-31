@@ -123,37 +123,31 @@ def listp(e):
     except errors.WrongArgumentTypeError:
         return False
 
-def consp(e):
-    """Returns whether an element is a cons or not (nil is NOT a cons)."""
-    return e is not lang.NIL and isinstance(e, lang.Cons)
+def type_(e):
+    """Returns the type of an element as a string."""
 
-def symbolp(e):
-    """Returns whether an element is a symbol or not."""
-    return isinstance(e, lang.Symbol)
+    if isinstance(e, lang.Symbol):
+        return "symbol"
+    elif isinstance(e, basestring):
+        return "string"
+    elif isinstance(e, (int, long)):
+        return "integer"
+    elif isinstance(e, float):
+        return "float"
+    elif isinstance(e, complex):
+        return "complex"
+    elif e is lang.NIL:
+        return "nil"
+    elif isinstance(e, lang.Cons):
+        return "cons"
+    elif isinstance(e, lang.Function):
+        return "function"
+    elif isinstance(e, lang.Macro):
+        return "macro"
 
-def stringp(e):
-    """Returns whether an element is a string or not."""
-    return isinstance(e, basestring)
-
-def numberp(e):
-    """Returns whether an element is a number or not."""
-    return isinstance(e, numbers.Number)
-
-def integerp(e):
-    """Returns whether an element is an integer or not."""
-    return isinstance(e, (int, long))
-
-def floatp(e):
-    """Returns whether an element is a float or not."""
-    return isinstance(e, float)
-
-def complexp(e):
-    """Returns whether an element is a complex number or not."""
-    return isinstance(e, complex)
-
-def functionp(e):
-    """Returns whether an element is a function or not."""
-    return isinstance(e, lang.Function)
+    # shouldn't ever get this far
+    raise errors.WrongArgumentTypeError("unsupported type: " +
+            e.__class__.__name__.lower())
 
 def is_(a, b):
     """Returns true if the two items refer to the same object in memory."""
@@ -307,7 +301,7 @@ global_env[lang.Symbol(tokens.AND)] = and_
 global_env[lang.Symbol(tokens.OR)] = or_
 global_env[lang.Symbol(tokens.EVAL)] = eval_
 
-# adds a new primitive function to the gloval environment
+# adds a new primitive function to the global environment
 ap = lambda t, f: global_env.put(lang.Symbol(t), lang.PrimitiveFunction(f, t))
 
 # repl
@@ -338,18 +332,6 @@ ap(tokens.GREATER_THAN_EQUAL, gte)
 ap(tokens.LESS_THAN, lt)
 ap(tokens.LESS_THAN_EQUAL, lte)
 
-# types
-ap(tokens.BOOLEANP, booleanp)
-ap(tokens.CONSP, consp)
-ap(tokens.LISTP, listp)
-ap(tokens.SYMBOLP, symbolp)
-ap(tokens.STRINGP, stringp)
-ap(tokens.NUMBERP, numberp)
-ap(tokens.INTEGERP, integerp)
-ap(tokens.FLOATP, floatp)
-ap(tokens.COMPLEXP, complexp)
-ap(tokens.FUNCTIONP, functionp)
-
 # cons
 ap(tokens.CONS, cons)
 ap(tokens.CAR, car)
@@ -357,6 +339,7 @@ ap(tokens.CDR, cdr)
 
 # meta
 ap(tokens.GENERATE_SYMBOL, gensym)
+ap(tokens.TYPE, type_)
 
 def parse(token_source):
     """

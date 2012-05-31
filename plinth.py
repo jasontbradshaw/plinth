@@ -623,7 +623,7 @@ def evaluate(sexp, env):
             # make sure we got a macro
             util.ensure_type(lang.Macro, m)
 
-            return m(env, *arg_expressions)
+            return m(evaluate, env, *arg_expressions)
 
         # define
         elif function is define:

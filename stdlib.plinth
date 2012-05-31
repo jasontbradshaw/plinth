@@ -48,10 +48,11 @@
 ; nil
 (define nil '())
 
-; types and helpful type checkers
+; type checkers and 'class' checkers (number?, callable?, etc.)
 (defun nil? (x) (is? x nil))
 (defun symbol? (e) (= (type e) "symbol"))
 (defun string? (e) (= (type e) "string"))
+(defun boolean? (e) (= (type e) "boolean"))
 (defun integer? (e) (= (type e) "integer"))
 (defun float? (e) (= (type e) "float"))
 (defun complex? (e) (= (type e) "complex"))
@@ -73,9 +74,6 @@
 
 ; not equal
 (defun != (a b) (not (= a b)))
-
-; an element is an atom if it's not a list
-(defun atom? (e) (not (list? e)))
 
 ; return a list of the passed-in items
 (defun list (items ...) items)

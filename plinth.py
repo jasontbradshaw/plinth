@@ -102,10 +102,6 @@ def atan2(a):
     util.ensure_type(numbers.Number, a)
     return math.atan2(a)
 
-def booleanp(e):
-    """Returns whether an element is a boolean or not."""
-    return isinstance(e, bool)
-
 def listp(e):
     """Returns whether an element is a list or not (nil is a list)."""
 
@@ -124,12 +120,14 @@ def listp(e):
         return False
 
 def type_(e):
-    """Returns the type of an element as a string."""
+    """Returns the type of an element as a string. Returns 'nil' for NIL."""
 
     if isinstance(e, lang.Symbol):
         return "symbol"
     elif isinstance(e, basestring):
         return "string"
+    elif isinstance(e, bool):
+        return "boolean"
     elif isinstance(e, (int, long)):
         return "integer"
     elif isinstance(e, float):
@@ -336,6 +334,7 @@ ap(tokens.LESS_THAN_EQUAL, lte)
 ap(tokens.CONS, cons)
 ap(tokens.CAR, car)
 ap(tokens.CDR, cdr)
+ap(tokens.LISTP, listp)
 
 # meta
 ap(tokens.GENERATE_SYMBOL, gensym)

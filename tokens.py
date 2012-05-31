@@ -62,6 +62,7 @@ ARCTAN2 = "atan2"
 
 # comparison
 IS = "is?"
+LISTP = "list?"
 EQUAL = "="
 GREATER_THAN = ">"
 GREATER_THAN_EQUAL = ">="

@@ -144,7 +144,7 @@ class Cons:
         if not isinstance(item.cdr, Cons):
             return str_fun(item.car) + " . " + str_fun(item.cdr)
 
-        return str_fun(item.car) + " " + self.__str_helper(item.cdr)
+        return str_fun(item.car) + " " + self.__str_helper(item.cdr, str_fun)
 
     def __str__(self, str_fun=str):
         return "(" + self.__str_helper(self, str_fun) + ")"

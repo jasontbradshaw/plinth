@@ -241,6 +241,8 @@ def parse_(s):
 def load(fname):
     """Read a file and evaluate it into the global scope."""
 
+    # TODO: make this evaluate into the CURRENT scope, not the global one
+
     util.ensure_type(basestring, fname)
 
     def file_char_iter(f):
@@ -252,7 +254,7 @@ def load(fname):
     # evaluate every expression in the file in sequence, top to bottom
     with open(os.path.abspath(fname), "r") as f:
         for result in parse(tokens.tokenize(file_char_iter(f))):
-            evaluate(result, global_env)
+            evaluate(result, GLOBAL_ENV)
 
     # return that we were successful
     return True
@@ -272,35 +274,35 @@ def gensym(prefix):
 # functions, and if so we evaluate it in whatever way it requires. this allows
 # the user to define new symbols that point to these functions, but still have
 # the functions work in the same way.
-quote = lang.PrimitiveFunction(lambda e: None, name=tokens.QUOTE_LONG)
-unquote = lang.PrimitiveFunction(lambda e: None, name=tokens.UNQUOTE_LONG)
-quasiquote = lang.PrimitiveFunction(lambda e: None, name=tokens.QUASIQUOTE_LONG)
-lambda_ = lang.PrimitiveFunction(lambda args, body: None, name=tokens.LAMBDA)
-macro = lang.PrimitiveFunction(lambda args, body: None, name=tokens.MACRO)
-expand = lang.PrimitiveFunction(lambda macro, *args: None, name=tokens.MACRO_EXPAND)
-define = lang.PrimitiveFunction(lambda symbol, value: None, name=tokens.DEFINE)
-cond = lang.PrimitiveFunction(lambda *e: None, name=tokens.COND)
-and_ = lang.PrimitiveFunction(lambda a, b, *rest: None, name=tokens.AND)
-or_ = lang.PrimitiveFunction(lambda a, b, *rest: None, name=tokens.OR)
-eval_ = lang.PrimitiveFunction(lambda sexp: None, name=tokens.EVAL)
+quote = lang.PrimitiveFunction(lambda e: _, name=tokens.QUOTE_LONG)
+unquote = lang.PrimitiveFunction(lambda e: _, name=tokens.UNQUOTE_LONG)
+quasiquote = lang.PrimitiveFunction(lambda e: _, name=tokens.QUASIQUOTE_LONG)
+lambda_ = lang.PrimitiveFunction(lambda args, body: _, name=tokens.LAMBDA)
+macro = lang.PrimitiveFunction(lambda args, body: _, name=tokens.MACRO)
+expand = lang.PrimitiveFunction(lambda macro, *args: _, name=tokens.MACRO_EXPAND)
+define = lang.PrimitiveFunction(lambda symbol, value: _, name=tokens.DEFINE)
+cond = lang.PrimitiveFunction(lambda *e: _, name=tokens.COND)
+and_ = lang.PrimitiveFunction(lambda a, b, *rest: _, name=tokens.AND)
+or_ = lang.PrimitiveFunction(lambda a, b, *rest: _, name=tokens.OR)
+eval_ = lang.PrimitiveFunction(lambda sexp: _, name=tokens.EVAL)
 
 # the base environment for the interpreter
-global_env = lang.Environment(None)
+GLOBAL_ENV = lang.Environment(None)
 
 # functions that need special treatment during evaluation
-global_env[lang.Symbol(tokens.QUOTE_LONG)] = quote
-global_env[lang.Symbol(tokens.QUASIQUOTE_LONG)] = quasiquote
-global_env[lang.Symbol(tokens.LAMBDA)] = lambda_
-global_env[lang.Symbol(tokens.MACRO)] = macro
-global_env[lang.Symbol(tokens.MACRO_EXPAND)] = expand
-global_env[lang.Symbol(tokens.DEFINE)] = define
-global_env[lang.Symbol(tokens.COND)] = cond
-global_env[lang.Symbol(tokens.AND)] = and_
-global_env[lang.Symbol(tokens.OR)] = or_
-global_env[lang.Symbol(tokens.EVAL)] = eval_
+GLOBAL_ENV[lang.Symbol(tokens.QUOTE_LONG)] = quote
+GLOBAL_ENV[lang.Symbol(tokens.QUASIQUOTE_LONG)] = quasiquote
+GLOBAL_ENV[lang.Symbol(tokens.LAMBDA)] = lambda_
+GLOBAL_ENV[lang.Symbol(tokens.MACRO)] = macro
+GLOBAL_ENV[lang.Symbol(tokens.MACRO_EXPAND)] = expand
+GLOBAL_ENV[lang.Symbol(tokens.DEFINE)] = define
+GLOBAL_ENV[lang.Symbol(tokens.COND)] = cond
+GLOBAL_ENV[lang.Symbol(tokens.AND)] = and_
+GLOBAL_ENV[lang.Symbol(tokens.OR)] = or_
+GLOBAL_ENV[lang.Symbol(tokens.EVAL)] = eval_
 
 # adds a new primitive function to the global environment
-ap = lambda t, f: global_env.put(lang.Symbol(t), lang.PrimitiveFunction(f, t))
+ap = lambda t, f: GLOBAL_ENV.put(lang.Symbol(t), lang.PrimitiveFunction(f, t))
 
 # repl
 ap(tokens.READ, read)
@@ -733,7 +735,7 @@ if __name__ == "__main__":
 
             # evaluate every entered expression sequentially
             for result in parse(tokens.tokenize(source)):
-                print prettify(evaluate(result, global_env))
+                print prettify(evaluate(result, GLOBAL_ENV))
 
             # reset the source and prompt on a successful evaluation
             source = ""

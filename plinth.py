@@ -12,10 +12,6 @@ import util
 # used to get generate guaranteed-unique symbol names
 GENSYM_COUNTER = util.ThreadSafeCounter()
 
-#
-# interpreter
-#
-
 def add(a, b, *rest):
     """Adds the all the given numbers together."""
 
@@ -101,23 +97,6 @@ def atan2(a):
     """Takes the second arctangent of a."""
     util.ensure_type(numbers.Number, a)
     return math.atan2(a)
-
-def listp(e):
-    """Returns whether an element is a list or not (nil is a list)."""
-
-    # nil is a list
-    if e is lang.NIL:
-        return True
-
-    # non-cons can't be lists
-    if not isinstance(e, lang.Cons):
-        return False
-
-    # only cons that len() works on are lists (throws an exception otherwise)
-    try:
-        return bool(len(e)) or True
-    except errors.WrongArgumentTypeError:
-        return False
 
 def type_(e):
     """Returns the type of an element as a string. Returns 'nil' for NIL."""
@@ -336,7 +315,7 @@ ap(tokens.LESS_THAN_EQUAL, lte)
 ap(tokens.CONS, cons)
 ap(tokens.CAR, car)
 ap(tokens.CDR, cdr)
-ap(tokens.LISTP, listp)
+ap(tokens.LISTP, lang.Cons.is_list)
 
 # meta
 ap(tokens.GENERATE_SYMBOL, gensym)
@@ -488,13 +467,14 @@ def quasiquote_evaluate(sexp, env, level=0):
     assert level >= 0
 
     # don't do anything fancy with non-lists
-    if not listp(sexp):
+    if not lang.Cons.is_list(sexp):
         return sexp
 
     # evaluate unquoted expressions (if any) when given a list
     result = []
     for item in sexp:
-        if listp(item) and len(item) > 0 and isinstance(item.car, lang.Symbol):
+        if (lang.Cons.is_list(item) and len(item) > 0 and
+                isinstance(item.car, lang.Symbol)):
             # quasiquote
             if item.car.value == tokens.QUASIQUOTE_LONG:
                 # further nesting always preserves the quasiquote expression
@@ -546,7 +526,7 @@ def evaluate(sexp, env):
         return env.find(sexp)
 
     # atom (not a literal list)
-    elif not listp(sexp):
+    elif not lang.Cons.is_list(sexp):
         # it's a generic atom and evaluates to itself
         return sexp
 

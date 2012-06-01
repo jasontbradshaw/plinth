@@ -73,6 +73,24 @@ class Cons:
 
         return result
 
+    @staticmethod
+    def is_list(e):
+        """Returns whether an element is a list or not (nil is a list)."""
+
+        # nil is a list
+        if e is NIL:
+            return True
+
+        # non-cons can't be lists
+        if not isinstance(e, Cons):
+            return False
+
+        # only cons that len() works on are lists (throws an exception otherwise)
+        try:
+            return bool(len(e)) or True
+        except errors.WrongArgumentTypeError:
+            return False
+
     def __str_helper(self, item, str_fun):
         # nil has no contents
         if item is NIL:

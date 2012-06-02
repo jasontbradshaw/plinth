@@ -174,7 +174,7 @@ def not_(a):
     are #t, so we return whether a is False.
     """
 
-    return a is lang.FALSE
+    return lang.Boolean.build(a is lang.FALSE)
 
 def cons(a, b):
     """Pair two items."""

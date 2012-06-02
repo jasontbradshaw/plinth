@@ -472,12 +472,12 @@ def quasiquote_evaluate(sexp, env, level=0):
             # quasiquote
             if item.car.value == tokens.QUASIQUOTE_LONG:
                 # further nesting always preserves the quasiquote expression
-                util.ensure_args(item.cdr, 1)
+                util.ensure_args(item.cdr, num_required=1)
                 result.append(quasiquote_evaluate(item, env, level + 1))
 
             # unquote
             elif item.car.value == tokens.UNQUOTE_LONG:
-                util.ensure_args(item.cdr, 1)
+                util.ensure_args(item.cdr, num_required=1)
 
                 if level == 0:
                     # evaluate item directly if we're fully unquoted
@@ -490,7 +490,7 @@ def quasiquote_evaluate(sexp, env, level=0):
 
             # unquote-splicing
             elif item.car.value == tokens.UNQUOTE_SPLICING_LONG:
-                util.ensure_args(item.cdr, 1)
+                util.ensure_args(item.cdr, num_required=1)
                 if level == 0:
                     result.extend(evaluate(item.cdr.car, env))
                 else:
@@ -542,37 +542,37 @@ def evaluate(sexp, env):
         # quote
         if function is quote:
             # return the argument unevaluated
-            util.ensure_args(args, 1)
+            util.ensure_args(args, num_required=1)
             return args.car
 
         # quasiquote
         elif function is quasiquote:
-            util.ensure_args(args, 1)
+            util.ensure_args(args, num_required=1)
             return quasiquote_evaluate(args.car, env)
 
         # function
         elif function is lambda_:
-            util.ensure_args(args, 2)
+            util.ensure_args(args, num_required=2)
 
             arg_symbols = args.car
             body = args.cdr.car
 
             # return a function with the current environment as the parent
-            return lang.Function(evaluate, arg_symbols, body, env)
+            return lang.Function(evaluate, env, arg_symbols, body)
 
         # macro
         elif function is macro:
-            util.ensure_args(args, 2)
+            util.ensure_args(args, num_required=2)
 
             arg_symbols = args.car
             body = args.cdr.car
 
             # return a macro with the given symbols and body
-            return lang.Macro(arg_symbols, body)
+            return lang.Macro(evaluate, env, arg_symbols, body)
 
         # macro expand
         elif function is expand:
-            util.ensure_args(args, 1, exact=False)
+            util.ensure_args(args, num_required=1, is_variadic=True)
 
             # evaluate to get the macro and its arguments
             m = evaluate(args.car, env)
@@ -585,7 +585,7 @@ def evaluate(sexp, env):
 
         # define
         elif function is define:
-            util.ensure_args(args, 2)
+            util.ensure_args(args, num_required=2)
 
             symbol = args.car
             value = args.cdr.car
@@ -600,9 +600,9 @@ def evaluate(sexp, env):
             result = evaluate(value, env)
             env[symbol] = result
 
-            # set a function or macro name if one isn't set yet
-            if isinstance(result, lang.Callable) and result.name is None:
-                result.name = symbol.value
+            # set the function or macro name if possible
+            if isinstance(result, lang.Callable):
+                result.name(symbol.value)
 
             return result
 
@@ -612,8 +612,8 @@ def evaluate(sexp, env):
                 # if e is not a list, len() raises an error for us
                 if len(tup) != 2:
                     # make sure each is a list of exactly two expressions
-                    raise errors.IncorrectArgumentCountError.build(
-                            "2 expressions", len(tup))
+                    s = "expected 2 expressions, got " + str(len(tup))
+                    raise errors.IncorrectArgumentCountError(s)
 
                 # first and second list items are condition and result
                 condition = tup.car
@@ -629,7 +629,7 @@ def evaluate(sexp, env):
 
         # logical and
         elif function is and_:
-            util.ensure_args(args, 2, False)
+            util.ensure_args(args, num_required=2, is_variadic=True)
 
             # evaluate the arguments, returning the final one if none were #f,
             # otherwise the last evaluated item, #f.
@@ -643,7 +643,7 @@ def evaluate(sexp, env):
 
         # logical or
         elif function is or_:
-            util.ensure_args(args, 2, False)
+            util.ensure_args(args, num_required=2, is_variadic=True)
 
             # evaluate the arguments, returning the first one that's not #f,
             last_item = None
@@ -656,7 +656,7 @@ def evaluate(sexp, env):
 
         # eval
         elif function is eval_:
-            util.ensure_args(args, 1)
+            util.ensure_args(args, num_required=1)
 
             # evaluate the given s-expression and return it
             return evaluate(evaluate(args.car, env), env)

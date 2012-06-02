@@ -18,6 +18,7 @@ class Atom:
         return str(self.value)
 
     def __repr__(self):
+        v = self.value if hasattr(self, "value") else None
         return self.__class__.__name__ + "(" + repr(self.value) + ")"
 
     def __eq__(self, other):
@@ -214,8 +215,101 @@ class Callable(Atom):
     """A base class for object in our language that can be 'called'."""
 
     def __init__(self, name=None):
-        """A name can optionally be set for display purposes."""
-        self.name = name
+        """A name can later be set for display purposes."""
+        Atom.__init__(self, name)
+
+    @staticmethod
+    def build_argspec(evaluate, env, args):
+        """
+        Parses the given args according to the language specification and
+        returns an ArgSpec object for them. Raises an error if parsing fails.
+        """
+
+        # the ArgSpec we'll return after filling it
+        argspec = util.ArgSpec()
+
+        # convert to a list for easy access/modification
+        args = list(args)
+
+        # consume the variadic arg first, if there is one
+        if len(args) > 1:
+            v = args[-1]
+            vararg_symbol = args[-2]
+            if isinstance(v, Symbol) and v.value == tokens.VARIADIC_ARG:
+                # store the vararg symbol, then remove its cruft from the list
+                argspec.variadic(vararg_symbol)
+                del args[-2:]
+
+        # consume optional args next
+        while len(args) > 0 and Cons.is_list(args[-1]):
+            # get the next argument in the list
+            opt_arg = args.pop()
+
+            # make sure we got a symbol and an expression for the optional arg
+            if len(opt_arg) != 2 or not isinstance(opt_arg.car, Symbol):
+                raise errors.WrongArgumentTypeError("optional arguments must " +
+                        "consist of a single symbol and a single expression")
+
+            # evaluate the expression and store the result in the spec
+            symbol = opt_arg.car
+            expression = opt_arg.cdr.car
+            argspec.optional(symbol, evaluate(expression, env))
+
+        # consume remaining required args
+        for symbol in args:
+            # optional args are no longer allowed
+            if Cons.is_list(symbol):
+                raise errors.WrongArgumentTypeError("optional arguments must " +
+                        "come after required arguments and before any " +
+                        "variadic argument.")
+            # deal with arguments that aren't symbols
+            elif not isinstance(symbol, Symbol):
+                raise errors.WrongArgumentTypeError.build(symbol, Symbol)
+
+            argspec.required(symbol)
+
+        return argspec
+
+    @staticmethod
+    def build_string(kind, name, argspec):
+        """
+        Build a string to display a typical callable in the interpreter. kind is
+        the object type to use, name is the (optional) name to give this
+        specific instance of the object, and argspec is the ArgSpec object to
+        use to build the arguments list.
+        """
+
+        s = "<" + str(kind)
+
+        # set the function name if possible
+        if name is not None:
+            s += " " + str(name)
+
+        s += " ("
+
+        # compose a list of all arg symbols
+        a = []
+        for arg_type, arg in argspec:
+            if arg_type == util.ArgSpec.REQUIRED:
+                a.append(str(arg))
+            elif arg_type == util.ArgSpec.OPTIONAL:
+                arg, default = arg
+                a.append("(" + str(arg) + " " + str(default) + ")")
+            elif arg_type == util.ArgSpec.VARIADIC:
+                a.append(str(arg))
+                a.append(tokens.VARIADIC_ARG)
+            else:
+                raise ValueError("Unhandled arg type: " + arg_type)
+
+        s += " ".join(a)
+        s += ")>"
+
+        return s
+
+    def name(self, name):
+        # set the name if it hasn't been stored yet
+        if self.value is None:
+            self.value = name
 
     def __eq__(self, other):
         """Callables are only equal if the other callable is this callable."""
@@ -227,7 +321,7 @@ class Function(Callable):
     arguments, have a body, and are evaluated in some context.
     """
 
-    def __init__(self, evaluate, args, body, parent, name=None):
+    def __init__(self, evaluate, parent, args, body, name=None):
         """
         Creates a function given a list of its arguments, its body, and
         its parent environment, i.e. the environment it was created and will be
@@ -242,91 +336,14 @@ class Function(Callable):
 
         assert isinstance(parent, Environment)
 
-        # convert to a list for easy access/modification
-        args = list(args)
-
-        # temporary storage for arguments and values -- order is important!
-        arg_dict = collections.OrderedDict()
-
-        # consume the variadic arg first, if there is one
-        if len(args) > 1:
-            vararg = args[-1]
-            symbol = args[-2]
-            if isinstance(vararg, Symbol) and vararg.value == tokens.VARIADIC_ARG:
-                # store the vararg symbol as the empty tuple by default, so we
-                # know that this is a variadic arg and not a default arg.
-                arg_dict[symbol] = ()
-
-                # remove the vararg and symbol since they've been processed
-                del args[-2:]
-
-        # consume optional args next
-        while len(args) > 0 and Cons.is_list(args[-1]):
-            # get the next argument in the list
-            opt_arg = args.pop()
-
-            # make sure we got a symbol and an expression for the optional arg
-            if len(opt_arg) != 2 or not isinstance(opt_arg.car, Symbol):
-                raise errors.WrongArgumentTypeError("optional arguments must " +
-                        "consist of a single symbol and a single expression")
-
-            # evaluate the expression and store the result in the map
-            symbol = opt_arg.car
-            expression = opt_arg.cdr.car
-            arg_dict[symbol] = evaluate(expression, parent)
-
-        # consume remaining required args
-        for symbol in args:
-            # optional args are no longer allowed
-            if Cons.is_list(symbol):
-                raise errors.WrongArgumentTypeError("optional arguments must " +
-                        "come after all required arguments and before any " +
-                        "variadic argument.")
-            # deal with arguments that aren't symbols
-            elif not isinstance(symbol, Symbol):
-                raise errors.WrongArgumentTypeError.build(symbol, Symbol)
-
-            # mark required args with None
-            arg_dict[symbol] = None
-
-        # save the reversed dict, since we put everything in from last to first
-        self.arg_dict = collections.OrderedDict()
-        for arg in reversed(arg_dict):
-            self.arg_dict[arg] = arg_dict[arg]
-
+        self.argspec = Callable.build_argspec(evaluate, parent, args)
         self.body = body
         self.parent = parent
 
         Callable.__init__(self, name)
 
     def __str__(self):
-        s = "<function"
-
-        if self.name is not None:
-            s += " " + self.name
-
-        s += " ("
-
-        # compose a list of all arg symbols
-        sl = []
-        for arg in self.arg_dict:
-            # required args
-            if self.arg_dict[arg] is None:
-                sl.append(str(arg))
-
-            # variadic arg
-            elif self.arg_dict[arg] == ():
-                sl.append(str(arg))
-                sl.append(tokens.VARIADIC_ARG)
-
-            # optional args
-            else:
-                sl.append("(" + str(arg) + " " + str(self.arg_dict[arg]) + ")")
-
-        s += " ".join(sl)
-        s += ")>"
-
-        return s
+        return Callable.build_string("function", self.value, self.argspec)
 
     def __call__(self, evaluate, *arg_values):
         """
@@ -334,33 +351,11 @@ class Function(Callable):
         and return the result.
         """
 
-        # count required arguments only
-        num_args = self.arg_dict.values().count(None)
-        util.ensure_args(arg_values, num_args, num_args == len(self.arg_dict))
-
         # create a new environment with the parent set as our parent environment
         env = Environment(self.parent)
 
-        # reverse the arg values and treat them like a stack
-        arg_value_stack = [v for v in reversed(arg_values)]
-        for arg in self.arg_dict:
-            # if it's the variadic arg, assign the remaining values
-            if self.arg_dict[arg] == ():
-                # add the remaining arguments, clear the stack
-                env[arg] = Cons.build(*reversed(arg_value_stack))
-                del arg_value_stack[:]
-
-            # assign values as long as we have required args left
-            elif len(arg_value_stack) > 0:
-                env[arg] = arg_value_stack.pop()
-
-            # assign default values when those run out
-            elif self.arg_dict[arg] is not None:
-                env[arg] = self.arg_dict[arg]
-
-            # this should never occur, since we guaranteed arg order in init
-            else:
-                assert False
+        # fill it with the arg spec's values (throws an error if impossible)
+        env.update(self.argspec.fill(arg_values))
 
         # evaluate our body using the new environment and return the result
         return evaluate(self.body, env)
@@ -380,45 +375,42 @@ class PrimitiveFunction(Function):
 
         self.method = method
 
-        # get our arguments with any variadic arg
-        args, vararg, keywords, defaults = inspect.getargspec(method)
+        # parse the arg spec (no support for keyword args)
+        args, vararg, _, defaults = inspect.getargspec(method)
+        defaults = () if defaults is None else defaults
 
-        # set the variadic argument (None if there wasn't one, else the arg)
-        self.vararg = vararg
+        self.argspec = util.ArgSpec()
 
-        # add the args
-        self.arg_names = args
+        # get the counts for our respective arg types
+        num_required = len(args) - len(defaults)
+        num_optional = len(args) - num_required
+
+        # add required arguments
+        for arg in args[:num_required]:
+            self.argspec.required(arg)
+
+        # add optional arguments, which come after required ones
+        for arg, default in itertools.izip(args[num_required:], defaults):
+            self.argspec.optional(arg, default)
+
+        # add the variadic arg if it exists
+        if vararg is not None:
+            self.argspec.variadic(vararg)
 
         Callable.__init__(self, name)
 
     def __str__(self):
-        s = "<primitive-function "
-
-        if self.name is not None:
-            s += self.name + " "
-
-        s += "("
-        s += " ".join(self.arg_names)
-
-        if self.vararg is not None:
-            s += " " + self.vararg + " " + tokens.VARIADIC_ARG
-
-        s += ")>"
-
-        return s
+        return Callable.build_string("primitive-function", self.value,
+                self.argspec)
 
     def __call__(self, evaluate, *arg_values):
         """
         Calls our internal method on the given arguments, ensuring that the
-        correct number of values was passed in. The evaluate argument is kept
-        only for compatibility with the Function class.
+        correct number of values was passed in. The evaluate argument is present
+        only for method-parity with the Function class.
         """
 
-        num_args = len(self.arg_names)
-        if self.vararg is not None:
-            num_args -= 1
-        util.ensure_args(arg_values, num_args, self.vararg is None)
-
+        self.argspec.validate(arg_values)
         return self.method(*arg_values)
 
 class Macro(Callable):
@@ -428,43 +420,15 @@ class Macro(Callable):
     into the macro body.
     """
 
-    def __init__(self, arg_symbols, body, name=None):
+    def __init__(self, evaluate, env, args, body, name=None):
 
-        # unroll arg symbols cons into a normal list so we can edit it
-        unrolled = []
-        for item in arg_symbols:
-            if not isinstance(item, Symbol):
-                raise errors.WrongArgumentTypeError.build(item, Symbol)
-            unrolled.append(item)
-        arg_symbols = unrolled
-
-        # handle any variadic arg
-        vararg = None
-        if len(arg_symbols) > 1 and arg_symbols[-1].value == tokens.VARIADIC_ARG:
-            vararg = arg_symbols[-2]
-            del arg_symbols[-1]
-
-        self.arg_symbols = arg_symbols
-        self.vararg = vararg
+        self.argspec = Callable.build_argspec(evaluate, env, args)
         self.body = body
 
         Callable.__init__(self, name)
 
     def __str__(self):
-        s = "<macro"
-
-        if self.name is not None:
-            s += " " + self.name
-
-        s += " ("
-        s += ' '.join(map(str, self.arg_symbols))
-
-        if self.vararg is not None:
-            s += " " + tokens.VARIADIC_ARG
-
-        s += ")>"
-
-        return s
+        return Callable.build_string("macro", self.value, self.argspec)
 
     def __call__(self, evaluate, env, *arg_sexps):
         """
@@ -472,23 +436,9 @@ class Macro(Callable):
         expressions.
         """
 
-        num_args = len(self.arg_symbols)
-        if self.vararg is not None:
-            num_args -= 1
-        util.ensure_args(arg_sexps, num_args, self.vararg is None)
-
         # map symbols to their replacement expressions in a new environment
         expand_env = Environment(env)
-        for i, (symbol, value) in enumerate(
-                itertools.izip(self.arg_symbols, arg_sexps)):
-            # see if we're on the last argument and we have a variadic arg
-            if self.vararg is not None and i == len(self.arg_symbols) - 1:
-                # map it into the environment as the remaining arg values
-                expand_env[self.vararg] = Cons.build(*arg_sexps[i:])
-
-            # add the symbol normally otherwise
-            else:
-                expand_env[symbol] = value
+        expand_env.update(self.argspec.fill(arg_sexps))
 
         # evaluate our body in the created environment
         return evaluate(self.body, expand_env)
@@ -535,6 +485,10 @@ class Environment:
     def put(self, symbol, value):
         """Shortcut for setting symbols to values."""
         return self.__setitem__(symbol, value)
+
+    def update(self, other_dict):
+        for key in other_dict:
+            self[key] = other_dict[key]
 
     def __str__(self):
         return str(self.items)

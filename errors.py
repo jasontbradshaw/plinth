@@ -27,9 +27,23 @@ class IncorrectArgumentCountError(Exception):
     """Raised when a function is called with the wrong number of arguments."""
 
     @staticmethod
-    def build(expected, actual):
-        return IncorrectArgumentCountError("expected " + str(expected) +
-                ", got " + str(actual))
+    def build(min_expected, max_expected, num_actual, is_variadic=False):
+
+        assert max_expected >= min_expected
+
+        s = "expected "
+
+        if min_expected != max_expected and not is_variadic:
+            s += "between " + str(min_expected) + " "
+            s += "and " + str(max_expected) + ", "
+        elif is_variadic:
+            s += "at least " + str(min_expected) + ", "
+        else:
+            s += str(max_expected) + ", "
+
+        s += "got " + str(num_actual)
+
+        return IncorrectArgumentCountError(s)
 
 class WrongArgumentTypeError(Exception):
     """Raised when an argument is of the wrong type."""

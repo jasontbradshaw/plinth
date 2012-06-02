@@ -211,27 +211,6 @@ def parse_(s):
     util.ensure_type(basestring, s)
     return lang.Cons.build(*parse(tokens.tokenize(s)))
 
-def load(fname):
-    """Read a file and evaluate it into the global scope."""
-
-    # TODO: make this evaluate into the CURRENT scope, not the global one
-
-    util.ensure_type(basestring, fname)
-
-    def file_char_iter(f):
-        """Iterate over a file one character at a time."""
-        for line in f:
-            for c in line:
-                yield c
-
-    # evaluate every expression in the file in sequence, top to bottom
-    with open(os.path.abspath(fname), "r") as f:
-        for result in parse(tokens.tokenize(file_char_iter(f))):
-            evaluate(result, GLOBAL_ENV)
-
-    # return that we were successful
-    return lang.TRUE
-
 def gensym(prefix):
     """
     Generate a unique symbol with the given prefix in its name. Generated
@@ -258,6 +237,7 @@ cond = lang.PrimitiveFunction(lambda *e: _, name=tokens.COND)
 and_ = lang.PrimitiveFunction(lambda a, b, *rest: _, name=tokens.AND)
 or_ = lang.PrimitiveFunction(lambda a, b, *rest: _, name=tokens.OR)
 eval_ = lang.PrimitiveFunction(lambda sexp: _, name=tokens.EVAL)
+load = lang.PrimitiveFunction(lambda fname: _, name=tokens.LOAD)
 
 # the base environment for the interpreter
 GLOBAL_ENV = lang.Environment(None)
@@ -273,6 +253,7 @@ GLOBAL_ENV[lang.Symbol(tokens.COND)] = cond
 GLOBAL_ENV[lang.Symbol(tokens.AND)] = and_
 GLOBAL_ENV[lang.Symbol(tokens.OR)] = or_
 GLOBAL_ENV[lang.Symbol(tokens.EVAL)] = eval_
+GLOBAL_ENV[lang.Symbol(tokens.LOAD)] = load
 
 # adds a new primitive function to the global environment
 ap = lambda t, f: GLOBAL_ENV.put(lang.Symbol(t), lang.PrimitiveFunction(f, t))
@@ -280,7 +261,6 @@ ap = lambda t, f: GLOBAL_ENV.put(lang.Symbol(t), lang.PrimitiveFunction(f, t))
 # repl
 ap(tokens.READ, read)
 ap(tokens.PARSE, parse_)
-ap(tokens.LOAD, load)
 
 # logical
 ap(tokens.NOT, not_)
@@ -661,6 +641,19 @@ def evaluate(sexp, env):
             # evaluate the given s-expression and return it
             return evaluate(evaluate(args.car, env), env)
 
+        # load
+        elif function is load:
+            util.ensure_args(args, num_required=1)
+            util.ensure_type(lang.String, args.car)
+
+            # evaluate every expression in the file in sequence, top to bottom
+            with open(os.path.abspath(args.car.value), "r") as f:
+                for result in parse(tokens.tokenize(util.file_char_iter(f))):
+                    evaluate(result, env)
+
+            # return that we were successful
+            return lang.TRUE
+
         # evaluate macros
         elif isinstance(function, lang.Macro):
             # evaluate the expanded form of the macro in the current environment
@@ -685,8 +678,11 @@ if __name__ == "__main__":
 
     # load all provided files into the global environment on interpreter start
     for fname in sys.argv[1:]:
-        if load(fname):
-            print "loaded '" + os.path.abspath(fname) + "'"
+        # evaluate every expression in the file in sequence, top to bottom
+        with open(os.path.abspath(fname), "r") as f:
+            for result in parse(tokens.tokenize(util.file_char_iter(f))):
+                evaluate(result, GLOBAL_ENV)
+        print "loaded '" + os.path.abspath(fname) + "'"
 
     while 1:
         try:

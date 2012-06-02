@@ -38,6 +38,12 @@ def ensure_args(supplied_args, num_required=0, num_optional=0, is_variadic=False
         raise errors.IncorrectArgumentCountError.build(min_args, max_args,
                 num_supplied, is_variadic=is_variadic)
 
+def file_char_iter(f):
+    """Iterate over an open file one character at a time."""
+    for line in f:
+        for c in line:
+            yield c
+
 class ArgSpec:
     """Holds all the arguments to a function in an easily accessible manner."""
 

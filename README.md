@@ -50,13 +50,18 @@ plinth supports lots of built-in functionality.
    scope with them for their lifetime. Functions can receive variadic arguments
    by using the special `...` postfix symbol after symbol names. For example, if
    a function's arguments are `things ...`, the function will have access to the
-   symbol `things` as a list of all the symbols from that position onwards.
+   symbol `things` as a list of all the symbols from that position onwards. If
+   arguments are given as a list of symbol and expression, they are considered
+   default arguments, and if not specified when the function is called, will
+   receive the value of the specified expression as evaluated when the function
+   was created.
 
  * `macro` returns a macro. It takes as its parameters a list of symbols and a
    body to evaluate with the symbols replaced with the unevaluated parameters to
    the macro call. Used to extend the language by constructing syntax that is
    subsequently evaluated. Macros are always expanded using the values of the
-   environment they're expanded in.
+   environment they're expanded in, and have the same creation argument
+   semantics as functions.
 
  * `expand` takes a macro and some arguments to be passed to it, and returns the
    expanded form of the macro using the given arguments.

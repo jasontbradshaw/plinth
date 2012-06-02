@@ -167,7 +167,7 @@ class Callable(Atom):
 
     def __init__(self, name=None):
         """A name can optionally be set for display purposes."""
-        self.name = None
+        self.name = name
 
 class Function(Callable):
     """

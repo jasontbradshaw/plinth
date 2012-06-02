@@ -79,6 +79,11 @@ class Cons:
         return result
 
     @staticmethod
+    def build_list(items):
+        """Same as build, but takes a single list as its arguments instead."""
+        return Cons.build(*items)
+
+    @staticmethod
     def is_list(e):
         """Returns whether an element is a list or not (nil is a list)."""
 
@@ -355,7 +360,7 @@ class Function(Callable):
         env = Environment(self.parent)
 
         # fill it with the arg spec's values (throws an error if impossible)
-        env.update(self.argspec.fill(arg_values))
+        env.update(self.argspec.fill(arg_values, Cons.build_list))
 
         # evaluate our body using the new environment and return the result
         return evaluate(self.body, env)
@@ -438,7 +443,7 @@ class Macro(Callable):
 
         # map symbols to their replacement expressions in a new environment
         expand_env = Environment(env)
-        expand_env.update(self.argspec.fill(arg_sexps))
+        expand_env.update(self.argspec.fill(arg_sexps, Cons.build_list))
 
         # evaluate our body in the created environment
         return evaluate(self.body, expand_env)

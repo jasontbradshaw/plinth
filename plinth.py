@@ -102,25 +102,25 @@ def type_(e):
     """Returns the type of an element as a string. Returns 'nil' for NIL."""
 
     if isinstance(e, lang.Symbol):
-        return "symbol"
-    elif isinstance(e, basestring):
-        return "string"
-    elif isinstance(e, bool):
-        return "boolean"
+        return lang.String("symbol")
+    elif isinstance(e, lang.String):
+        return lang.String("string")
+    elif isinstance(e, lang.Boolean):
+        return lang.String("boolean")
     elif isinstance(e, (int, long)):
-        return "integer"
+        return lang.String("integer")
     elif isinstance(e, float):
-        return "float"
+        return lang.String("float")
     elif isinstance(e, complex):
-        return "complex"
+        return lang.String("complex")
     elif e is lang.NIL:
-        return "nil"
+        return lang.String("nil")
     elif isinstance(e, lang.Cons):
-        return "cons"
+        return lang.String("cons")
     elif isinstance(e, lang.Function):
-        return "function"
+        return lang.String("function")
     elif isinstance(e, lang.Macro):
-        return "macro"
+        return lang.String("macro")
 
     # shouldn't ever get this far
     raise errors.WrongArgumentTypeError("unsupported type: " +
@@ -128,7 +128,7 @@ def type_(e):
 
 def is_(a, b):
     """Returns true if the two items refer to the same object in memory."""
-    return a is b
+    return lang.Boolean.build(a is b)
 
 def equal(a, b):
     """
@@ -139,40 +139,34 @@ def equal(a, b):
 
     # the same item is equal to itself
     if a is b:
-        return True
+        return lang.TRUE
 
     # things can't be equal if they're not the same class
     elif not (isinstance(a, b.__class__) and isinstance(b, a.__class__)):
-        return False
-
-    # we know both args are of the same class now, no need to check both
-
-    # different functions can never be equal
-    elif isinstance(a, lang.Function):
-        return False
+        return lang.FALSE
 
     # compare everything else by value (numbers, Cons, symbols, etc.)
-    return a == b
+    return lang.Boolean.build(a == b)
 
 def gt(a, b):
     """Compare two numbers using '>'."""
     util.ensure_type(numbers.Number, a, b)
-    return a > b
+    return lang.Boolean.build(a > b)
 
 def gte(a, b):
     """Compare two numbers using '>='."""
     util.ensure_type(numbers.Number, a, b)
-    return a >= b
+    return lang.Boolean.build(a >= b)
 
 def lt(a, b):
     """Compare two numbers using '<'."""
     util.ensure_type(numbers.Number, a, b)
-    return a < b
+    return lang.Boolean.build(a < b)
 
 def lte(a, b):
     """Compare two numbers using '<='."""
     util.ensure_type(numbers.Number, a, b)
-    return a <= b
+    return lang.Boolean.build(a <= b)
 
 def not_(a):
     """
@@ -180,7 +174,7 @@ def not_(a):
     are #t, so we return whether a is False.
     """
 
-    return a is False
+    return a is lang.FALSE
 
 def cons(a, b):
     """Pair two items."""
@@ -210,7 +204,7 @@ def cdr(e):
 def read(prompt):
     """Print the prompt, read input from stdin, and return it as a string."""
     util.ensure_type(basestring, prompt)
-    return raw_input(prompt)
+    return String(raw_input(prompt))
 
 def parse_(s):
     """Parse a string into a list of the S-expressions it describes."""
@@ -236,7 +230,7 @@ def load(fname):
             evaluate(result, GLOBAL_ENV)
 
     # return that we were successful
-    return True
+    return lang.TRUE
 
 def gensym(prefix):
     """
@@ -564,7 +558,7 @@ def evaluate(sexp, env):
             body = args.cdr.car
 
             # return a function with the current environment as the parent
-            return lang.Function(arg_symbols, body, env)
+            return lang.Function(evaluate, arg_symbols, body, env)
 
         # macro
         elif function is macro:
@@ -625,13 +619,13 @@ def evaluate(sexp, env):
                 condition = tup.car
                 result = tup.cdr.car
 
-                # evaluate and return the result if condition is True
+                # evaluate and return the result if condition is true
                 if evaluate(condition, env):
                     return evaluate(result, env)
 
             # if no result is returned, result is undefined
             raise errors.ApplicationError("at least one condition must " +
-                    "evaluate to " + prettify(True))
+                    "evaluate to " + lang.TRUE)
 
         # logical and
         elif function is and_:
@@ -642,7 +636,7 @@ def evaluate(sexp, env):
             last_item = None
             for item in args:
                 last_item = evaluate(item, env)
-                if last_item is False:
+                if last_item is lang.FALSE:
                     break
 
             return last_item
@@ -655,7 +649,7 @@ def evaluate(sexp, env):
             last_item = None
             for item in args:
                 last_item = evaluate(item, env)
-                if not last_item is False:
+                if not last_item is lang.FALSE:
                     break
 
             return last_item
@@ -675,20 +669,6 @@ def evaluate(sexp, env):
         else:
             # evaluate args and call the function with them
             return function(evaluate, *[evaluate(arg, env) for arg in args])
-
-def prettify(item):
-    """Convert certain types into special strings, and all others normally."""
-
-    if isinstance(item, bool):
-        return tokens.TRUE if item else tokens.FALSE
-
-    if isinstance(item, basestring):
-        return tokens.STRING + item + tokens.STRING
-
-    if isinstance(item, lang.Cons):
-        return item.__str__(prettify)
-
-    return str(item)
 
 if __name__ == "__main__":
     import sys
@@ -715,7 +695,7 @@ if __name__ == "__main__":
 
             # evaluate every entered expression sequentially
             for result in parse(tokens.tokenize(source)):
-                print prettify(evaluate(result, GLOBAL_ENV))
+                print evaluate(result, GLOBAL_ENV)
 
             # reset the source and prompt on a successful evaluation
             source = ""

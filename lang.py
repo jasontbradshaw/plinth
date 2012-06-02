@@ -1,3 +1,4 @@
+import collections
 import inspect
 import itertools
 
@@ -18,6 +19,9 @@ class Atom:
 
     def __repr__(self):
         return self.__class__.__name__ + "(" + repr(self.value) + ")"
+
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and self.value == other.value
 
     @staticmethod
     def to_atom(token):
@@ -41,13 +45,13 @@ class Atom:
 
         # boolean
         if token.lower() == tokens.TRUE:
-            return True
+            return TRUE
         elif token.lower() == tokens.FALSE:
-            return False
+            return FALSE
 
         # string (strips wrapping string tokens)
         elif token.startswith(tokens.STRING) and token.endswith(tokens.STRING):
-            return token[len(tokens.STRING):-len(tokens.STRING)]
+            return String(token[len(tokens.STRING):-len(tokens.STRING)])
 
         # the base case for all tokens is a symbol
         return Symbol(token)
@@ -91,21 +95,21 @@ class Cons:
         except errors.WrongArgumentTypeError:
             return False
 
-    def __str_helper(self, item, str_fun):
+    def __str_helper(self, item):
         # nil has no contents
         if item is NIL:
             return ""
 
         if item.cdr is NIL:
-            return str_fun(item.car)
+            return str(item.car)
 
         if not isinstance(item.cdr, Cons):
-            return str_fun(item.car) + " . " + str_fun(item.cdr)
+            return str(item.car) + " . " + str(item.cdr)
 
-        return str_fun(item.car) + " " + self.__str_helper(item.cdr, str_fun)
+        return str(item.car) + " " + self.__str_helper(item.cdr)
 
-    def __str__(self, str_fun=str):
-        return "(" + self.__str_helper(self, str_fun) + ")"
+    def __str__(self):
+        return "(" + self.__str_helper(self) + ")"
 
     def __repr__(self):
         return (self.__class__.__name__ +
@@ -148,6 +152,50 @@ class Cons:
 # the singleton 'nil' value, an empty Cons: we define it here so Cons can use it
 NIL = Cons(None, None)
 
+class Boolean(Atom):
+    """
+    Represents the base boolean type in our language. Evaluates to True and
+    False for each type, respectively.
+    """
+
+    def __init__(self, value):
+        Atom.__init__(self, value)
+
+    def __str__(self):
+        """Return the language token for true or false."""
+        return tokens.TRUE if self.value else tokens.FALSE
+
+    def __nonzero__(self):
+        """Makes boolean expressions work and return instances of this class."""
+        return self.value
+
+    @staticmethod
+    def build(value):
+        return TRUE if value else FALSE
+
+# singleton true and false values in the language
+TRUE = Boolean(True)
+FALSE = Boolean(False)
+
+class String(Atom):
+    """
+    Functions exactly the same as a unicode string, but the string representation
+    uses our language's tokens.
+    """
+
+    def __init__(self, value):
+        Atom.__init__(self, value)
+
+    def __unicode__(self):
+        v = self.value.replace('"', tokens.ESCAPE_CHAR + '"')
+        return tokens.STRING + unicode(v) + tokens.STRING
+
+    def __str__(self):
+        return unicode(self)
+
+    def __repr__(self):
+        return self.__class__.__name__ + "(" + repr(self.value) + ")"
+
 class Symbol(Atom):
     """Symbols store other values, and evaluate to their stored values."""
 
@@ -169,39 +217,83 @@ class Callable(Atom):
         """A name can optionally be set for display purposes."""
         self.name = name
 
+    def __eq__(self, other):
+        """Callables are only equal if the other callable is this callable."""
+        return isinstance(other, self.__class__) and other is self
+
 class Function(Callable):
     """
     Represents a function in our language. Functions take some number of
     arguments, have a body, and are evaluated in some context.
     """
 
-    def __init__(self, arg_symbols, body, parent, name=None):
+    def __init__(self, evaluate, args, body, parent, name=None):
         """
-        Creates a function given a list of its argument symbols, its body, and
+        Creates a function given a list of its arguments, its body, and
         its parent environment, i.e. the environment it was created and will be
-        evaluated in (its closure). If the last argument is marked as variadic,
-        it gets stored away to allow for different processing when the function
-        is called with arguments.
+        evaluated in (its closure). If the last argument is the variadic
+        argument symbol, the preceding symbol is treated as a variadic arg.
+        Optional arguments follow required arguments but precede any variadic
+        arg, and consist of a two item list of symbol and expression, of which
+        the expression is evaluated immediately.
         """
+
+        # NOTE: arguments MUST come in the order: required, optional, variadic
 
         assert isinstance(parent, Environment)
 
-        # unroll the cons
-        arg_symbols = [symbol for symbol in arg_symbols]
+        # convert to a list for easy access/modification
+        args = list(args)
 
-        # all arguments must be symbols
-        for item in arg_symbols:
-            if not isinstance(item, Symbol):
-                raise errors.WrongArgumentTypeError.build(item, Symbol)
+        # temporary storage for arguments and values -- order is important!
+        arg_dict = collections.OrderedDict()
 
-        # separate out the vararg if the final symbol uses the vararg token
-        vararg = None
-        if len(arg_symbols) > 1 and arg_symbols[-1].value == tokens.VARIADIC_ARG:
-            vararg = arg_symbols[-2]
-            del arg_symbols[-1]
+        # consume the variadic arg first, if there is one
+        if len(args) > 1:
+            vararg = args[-1]
+            symbol = args[-2]
+            if isinstance(vararg, Symbol) and vararg.value == tokens.VARIADIC_ARG:
+                # store the vararg symbol as the empty tuple by default, so we
+                # know that this is a variadic arg and not a default arg.
+                arg_dict[symbol] = ()
 
-        self.arg_symbols = arg_symbols
-        self.vararg = vararg
+                # remove the vararg and symbol since they've been processed
+                del args[-2:]
+
+        # consume optional args next
+        while len(args) > 0 and Cons.is_list(args[-1]):
+            # get the next argument in the list
+            opt_arg = args.pop()
+
+            # make sure we got a symbol and an expression for the optional arg
+            if len(opt_arg) != 2 or not isinstance(opt_arg.car, Symbol):
+                raise errors.WrongArgumentTypeError("optional arguments must " +
+                        "consist of a single symbol and a single expression")
+
+            # evaluate the expression and store the result in the map
+            symbol = opt_arg.car
+            expression = opt_arg.cdr.car
+            arg_dict[symbol] = evaluate(expression, parent)
+
+        # consume remaining required args
+        for symbol in args:
+            # optional args are no longer allowed
+            if Cons.is_list(symbol):
+                raise errors.WrongArgumentTypeError("optional arguments must " +
+                        "come after all required arguments and before any " +
+                        "variadic argument.")
+            # deal with arguments that aren't symbols
+            elif not isinstance(symbol, Symbol):
+                raise errors.WrongArgumentTypeError.build(symbol, Symbol)
+
+            # mark required args with None
+            arg_dict[symbol] = None
+
+        # save the reversed dict, since we put everything in from last to first
+        self.arg_dict = collections.OrderedDict()
+        for arg in reversed(arg_dict):
+            self.arg_dict[arg] = arg_dict[arg]
+
         self.body = body
         self.parent = parent
 
@@ -214,25 +306,25 @@ class Function(Callable):
             s += " " + self.name
 
         s += " ("
-        s += ' '.join(map(str, self.arg_symbols))
 
-        if self.vararg is not None:
-            s += " " + tokens.VARIADIC_ARG
+        # compose a list of all arg symbols
+        sl = []
+        for arg in self.arg_dict:
+            # required args
+            if self.arg_dict[arg] is None:
+                sl.append(str(arg))
 
+            # variadic arg
+            elif self.arg_dict[arg] == ():
+                sl.append(str(arg))
+                sl.append(tokens.VARIADIC_ARG)
+
+            # optional args
+            else:
+                sl.append("(" + str(arg) + " " + str(self.arg_dict[arg]) + ")")
+
+        s += " ".join(sl)
         s += ")>"
-
-        return s
-
-    def __repr__(self):
-        s = self.__class__.__name__ + "("
-        s += repr(self.arg_symbols) + ", "
-        s += repr(self.body) + ", "
-        s += repr(self.parent)
-
-        if self.name is not None:
-            s += ", name=" + repr(self.name)
-
-        s += ")"
 
         return s
 
@@ -242,29 +334,33 @@ class Function(Callable):
         and return the result.
         """
 
-        num_args = len(self.arg_symbols)
-        if self.vararg is not None:
-            num_args -= 1
-        util.ensure_args(arg_values, num_args, self.vararg is None)
+        # count required arguments only
+        num_args = self.arg_dict.values().count(None)
+        util.ensure_args(arg_values, num_args, num_args == len(self.arg_dict))
 
         # create a new environment with the parent set as our parent environment
         env = Environment(self.parent)
 
-        # map the vararg to nil by default, to ensure it is a list
-        if self.vararg is not None:
-            env[self.vararg] = NIL
+        # reverse the arg values and treat them like a stack
+        arg_value_stack = [v for v in reversed(arg_values)]
+        for arg in self.arg_dict:
+            # if it's the variadic arg, assign the remaining values
+            if self.arg_dict[arg] == ():
+                # add the remaining arguments, clear the stack
+                env[arg] = Cons.build(*reversed(arg_value_stack))
+                del arg_value_stack[:]
 
-        # put the argument values into the new environment, mapping by position
-        for i, (symbol, value) in enumerate(
-                itertools.izip(self.arg_symbols, arg_values)):
-            # see if we're on the last argument and we have a variadic arg
-            if self.vararg is not None and i == len(self.arg_symbols) - 1:
-                # map it into the environment as the remaining arg values
-                env[self.vararg] = Cons.build(*arg_values[i:])
+            # assign values as long as we have required args left
+            elif len(arg_value_stack) > 0:
+                env[arg] = arg_value_stack.pop()
 
-            # add the symbol normally otherwise
+            # assign default values when those run out
+            elif self.arg_dict[arg] is not None:
+                env[arg] = self.arg_dict[arg]
+
+            # this should never occur, since we guaranteed arg order in init
             else:
-                env[symbol] = value
+                assert False
 
         # evaluate our body using the new environment and return the result
         return evaluate(self.body, env)
@@ -285,7 +381,7 @@ class PrimitiveFunction(Function):
         self.method = method
 
         # get our arguments with any variadic arg
-        args, vararg, _, _ = inspect.getargspec(method)
+        args, vararg, keywords, defaults = inspect.getargspec(method)
 
         # set the variadic argument (None if there wasn't one, else the arg)
         self.vararg = vararg
@@ -308,17 +404,6 @@ class PrimitiveFunction(Function):
             s += " " + self.vararg + " " + tokens.VARIADIC_ARG
 
         s += ")>"
-
-        return s
-
-    def __repr__(self):
-        s = self.__class__.__name__ + "("
-        s += repr(self.method)
-
-        if self.name is not None:
-            s += ", name=" + repr(self.name)
-
-        s += ")"
 
         return s
 
@@ -378,18 +463,6 @@ class Macro(Callable):
             s += " " + tokens.VARIADIC_ARG
 
         s += ")>"
-
-        return s
-
-    def __repr__(self):
-        s = self.__class__.__name__ + "("
-        s += repr(self.arg_symbols) + ", "
-        s += repr(self.body)
-
-        if self.name is not None:
-            s += ", name=" + repr(self.name)
-
-        s += ")"
 
         return s
 

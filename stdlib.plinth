@@ -90,13 +90,10 @@
           ((> n 0) (nth (- n 1) (cdr list)))))
 
 ; reverse a list
-(defun reverse (list)
-    (reverse-aux list nil))
-
-(defun reverse-aux (list accum)
+(defun reverse (list (accum nil))
     (if (nil? list)
         accum
-        (reverse-aux (rest list) (cons (first list) accum))))
+        (reverse (rest list) (cons (first list) accum))))
 
 ; map
 (defun map (f list)

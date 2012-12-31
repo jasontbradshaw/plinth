@@ -7,9 +7,7 @@ import tokens
 import util
 
 class Atom:
-    """
-    Represents anything that's not a list: numbers, strings, symbols, etc.
-    """
+    """The base class all custom language constructs inherit from."""
 
     def __init__(self, value):
         self.value = value
@@ -46,13 +44,13 @@ class Atom:
 
         # boolean
         if token.lower() == tokens.TRUE:
-            return TRUE
+            return True
         elif token.lower() == tokens.FALSE:
-            return FALSE
+            return False
 
         # string (strips wrapping string tokens)
         elif token.startswith(tokens.STRING) and token.endswith(tokens.STRING):
-            return String(token[len(tokens.STRING):-len(tokens.STRING)])
+            return unicode(token[len(tokens.STRING):-len(tokens.STRING)])
 
         # the base case for all tokens is a symbol
         return Symbol(token)
@@ -157,50 +155,6 @@ class Cons:
 
 # the singleton 'nil' value, an empty Cons: we define it here so Cons can use it
 NIL = Cons(None, None)
-
-class Boolean(Atom):
-    """
-    Represents the base boolean type in our language. Evaluates to True and
-    False for each type, respectively.
-    """
-
-    def __init__(self, value):
-        Atom.__init__(self, value)
-
-    def __str__(self):
-        """Return the language token for true or false."""
-        return tokens.TRUE if self.value else tokens.FALSE
-
-    def __nonzero__(self):
-        """Makes boolean expressions work and return instances of this class."""
-        return self.value
-
-    @staticmethod
-    def build(value):
-        return TRUE if value else FALSE
-
-# singleton true and false values in the language
-TRUE = Boolean(True)
-FALSE = Boolean(False)
-
-class String(Atom):
-    """
-    Functions exactly the same as a unicode string, but the string representation
-    uses our language's tokens.
-    """
-
-    def __init__(self, value):
-        Atom.__init__(self, value)
-
-    def __unicode__(self):
-        v = self.value.replace('"', tokens.ESCAPE_CHAR + '"')
-        return tokens.STRING + unicode(v) + tokens.STRING
-
-    def __str__(self):
-        return unicode(self)
-
-    def __repr__(self):
-        return self.__class__.__name__ + "(" + repr(self.value) + ")"
 
 class Symbol(Atom):
     """Symbols store other values, and evaluate to their stored values."""

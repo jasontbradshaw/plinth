@@ -320,7 +320,7 @@ def evaluate(sexp, env):
 
             # if no result is returned, result is undefined
             raise errors.ApplicationError('at least one condition must ' +
-                    'evaluate to ' + lang.TRUE)
+                    'evaluate to ' + tokens.TRUE)
 
         # logical and
         elif function is primitives.and_:
@@ -331,7 +331,7 @@ def evaluate(sexp, env):
             last_item = None
             for item in args:
                 last_item = evaluate(item, env)
-                if last_item is lang.FALSE:
+                if last_item is False:
                     break
 
             return last_item
@@ -344,7 +344,7 @@ def evaluate(sexp, env):
             last_item = None
             for item in args:
                 last_item = evaluate(item, env)
-                if not last_item is lang.FALSE:
+                if not last_item is False:
                     break
 
             return last_item
@@ -359,15 +359,15 @@ def evaluate(sexp, env):
         # load
         elif function is primitives.load:
             util.ensure_args(args, num_required=1)
-            util.ensure_type(lang.String, args.car)
+            util.ensure_type(basestring, args.car)
 
             # evaluate every expression in the file in sequence, top to bottom
-            with open(os.path.abspath(args.car.value), 'r') as f:
+            with open(os.path.abspath(args.car), 'r') as f:
                 for result in parse(tokens.tokenize(util.file_char_iter(f))):
                     evaluate(result, env)
 
             # return that we were successful
-            return lang.TRUE
+            return True
 
         # evaluate macros
         elif isinstance(function, lang.Macro):
@@ -471,7 +471,7 @@ class Interpreter(object):
 
                 # evaluate every entered expression sequentially
                 for result in parse(tokens.tokenize(source)):
-                    print evaluate(result, self.env)
+                    print util.to_string(evaluate(result, self.env))
 
                 # reset the source and prompt on a successful evaluation
                 source = ''
@@ -485,7 +485,7 @@ class Interpreter(object):
             except KeyboardInterrupt:
                 # reset input on Ctrl+C
                 prompt = self.standard_prompt
-                source = ''
+                source = u''
                 print
             except EOFError:
                 # exit on Ctrl+D
@@ -496,7 +496,7 @@ class Interpreter(object):
                 traceback.print_exc()
 
                 # reset the source and prompt for the next parse
-                source = ''
+                source = u''
                 prompt = self.standard_prompt
 
 

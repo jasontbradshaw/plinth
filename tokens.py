@@ -6,70 +6,70 @@
 # syntactic constructs
 #
 
-OPEN_PAREN = '('
-CLOSE_PAREN = ')'
-QUOTE = "'"
-QUASIQUOTE = '`'
-UNQUOTE = ','
+OPEN_PAREN = u'('
+CLOSE_PAREN = u')'
+QUOTE = u"'"
+QUASIQUOTE = u'`'
+UNQUOTE = u','
 UNQUOTE_SPLICING = '^'
-WHITESPACE = frozenset([' ', '\t', '\n', '\r', '\f', '\v'])
-ESCAPE_CHAR = '\\'
-STRING = '"'
-COMMENT = ';'
-LINE_SEPARATORS = frozenset(['\r', '\n'])
-VARIADIC_ARG = '...'
+WHITESPACE = frozenset([u' ', u'\t', u'\n', u'\r', u'\f', u'\v'])
+ESCAPE_CHAR = u'\\'
+STRING = u'"'
+COMMENT = u';'
+LINE_SEPARATORS = frozenset([u'\r', u'\n'])
+VARIADIC_ARG = u'...'
 
 #
 # functions
 #
 
 # general
-LAMBDA = 'lambda'
-MACRO = 'macro'
-MACRO_EXPAND = 'expand'
-GENERATE_SYMBOL = 'gensym'
-DEFINE = 'define'
-COND = 'cond'
-TYPE = 'type'
+LAMBDA = u'lambda'
+MACRO = u'macro'
+MACRO_EXPAND = u'expand'
+GENERATE_SYMBOL = u'gensym'
+DEFINE = u'define'
+COND = u'cond'
+TYPE = u'type'
 
 # boolean symbols
-TRUE = '#t'
-FALSE = '#f'
+TRUE = u'#t'
+FALSE = u'#f'
 
 # repl
-READ = 'read'
-PARSE = 'parse'
-EVAL = 'eval'
-LOAD = 'load'
+READ = u'read'
+PARSE = u'parse'
+EVAL = u'eval'
+LOAD = u'load'
 
 # quoting
-QUOTE_LONG = 'quote'
-QUASIQUOTE_LONG = 'quasiquote'
-UNQUOTE_LONG = 'unquote'
-UNQUOTE_SPLICING_LONG = 'unquote-splicing'
+QUOTE_LONG = u'quote'
+QUASIQUOTE_LONG = u'quasiquote'
+UNQUOTE_LONG = u'unquote'
+UNQUOTE_SPLICING_LONG = u'unquote-splicing'
 
 # math
-ADD = '+'
-SUBTRACT = '-'
-MULTIPLY = '*'
-DIVIDE = '/'
-POWER = 'pow'
+ADD = u'+'
+SUBTRACT = u'-'
+MULTIPLY = u'*'
+DIVIDE = u'/'
+POWER = u'pow'
 
 # comparison
-IS = 'is?'
-LISTP = 'list?'
-EQUAL = '='
-GREATER_THAN = '>'
+IS = u'is?'
+LISTP = u'list?'
+EQUAL = u'='
+GREATER_THAN = u'>'
 
 # logic
-AND = 'and'
-OR = 'or'
-NOT = 'not'
+AND = u'and'
+OR = u'or'
+NOT = u'not'
 
 # cons
-CONS = 'cons'
-CAR = 'car'
-CDR = 'cdr'
+CONS = u'cons'
+CAR = u'car'
+CDR = u'cdr'
 
 # used to de-sugar various syntactic elements
 SUGAR = {
@@ -92,7 +92,7 @@ def tokenize(source):
         '''Returns the buffer contents as a string and clears the buffer.'''
 
         # get the contents of the buffer as a string
-        result = ''.join(buf)
+        result = u''.join(buf)
 
         # uses __delslice__ method of the list so we modify original buffer
         # and not the local copy.

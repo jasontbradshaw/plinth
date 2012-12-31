@@ -73,25 +73,25 @@ def type_(e):
     '''Returns the type of an element as a string. Returns 'nil' for NIL.'''
 
     if isinstance(e, lang.Symbol):
-        return lang.String('symbol')
-    elif isinstance(e, lang.String):
-        return lang.String('string')
-    elif isinstance(e, lang.Boolean):
-        return lang.String('boolean')
+        return u'symbol'
+    elif isinstance(e, basestring):
+        return u'string'
+    elif isinstance(e, bool):
+        return u'boolean'
     elif isinstance(e, (int, long)):
-        return lang.String('integer')
+        return u'integer'
     elif isinstance(e, float):
-        return lang.String('float')
+        return u'float'
     elif isinstance(e, complex):
-        return lang.String('complex')
+        return u'complex'
     elif e is lang.NIL:
-        return lang.String('nil')
+        return u'nil'
     elif isinstance(e, lang.Cons):
-        return lang.String('cons')
+        return u'cons'
     elif isinstance(e, lang.Function):
-        return lang.String('function')
+        return u'function'
     elif isinstance(e, lang.Macro):
-        return lang.String('macro')
+        return u'macro'
 
     # shouldn't ever get this far
     raise errors.WrongArgumentTypeError('unsupported type: ' +
@@ -99,7 +99,7 @@ def type_(e):
 
 def is_(a, b):
     '''Returns true if the two items refer to the same object in memory.'''
-    return lang.Boolean.build(a is b)
+    return a is b
 
 def equal(a, b):
     '''
@@ -110,19 +110,19 @@ def equal(a, b):
 
     # the same item is equal to itself
     if a is b:
-        return lang.TRUE
+        return True
 
     # things can't be equal if they're not the same class
     elif not (isinstance(a, b.__class__) and isinstance(b, a.__class__)):
-        return lang.FALSE
+        return False
 
     # compare everything else by value (numbers, Cons, symbols, etc.)
-    return lang.Boolean.build(a == b)
+    return a == b
 
 def gt(a, b):
     '''Compare two numbers using '>'.'''
     util.ensure_type(numbers.Number, a, b)
-    return lang.Boolean.build(a > b)
+    return (a > b)
 
 def not_(a):
     '''
@@ -130,7 +130,7 @@ def not_(a):
     are #t, so we return whether a is False.
     '''
 
-    return lang.Boolean.build(a is lang.FALSE)
+    return a is False
 
 def cons(a, b):
     '''Pair two items.'''
@@ -160,7 +160,7 @@ def cdr(e):
 def read(prompt):
     '''Print the prompt, read input from stdin, and return it as a string.'''
     util.ensure_type(basestring, prompt)
-    return String(raw_input(prompt))
+    return unicode(raw_input(prompt))
 
 def parse_(s):
     '''Parse a string into a list of the S-expressions it describes.'''

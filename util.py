@@ -2,6 +2,7 @@ import collections
 import threading
 
 import errors
+import tokens
 
 def ensure_type(required_class, item, *rest):
     '''
@@ -43,6 +44,17 @@ def file_char_iter(f):
     for line in f:
         for c in line:
             yield c
+
+def to_string(x):
+    '''Convert an atom to a string as it appears in our language.'''
+
+    if isinstance(x, bool):
+        return tokens.TRUE if x else tokens.FALSE
+    elif isinstance(x, basestring):
+        # TODO: escape properly
+        return tokens.STRING + x + tokens.STRING
+
+    return unicode(x)
 
 class ArgSpec:
     '''Holds all the arguments to a function in an easily accessible manner.'''

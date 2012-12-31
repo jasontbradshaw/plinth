@@ -6,78 +6,78 @@
 # syntactic constructs
 #
 
-OPEN_PAREN = "("
-CLOSE_PAREN = ")"
+OPEN_PAREN = '('
+CLOSE_PAREN = ')'
 QUOTE = "'"
-QUASIQUOTE = "`"
-UNQUOTE = ","
-UNQUOTE_SPLICING = "^"
-WHITESPACE = frozenset([" ", "\t", "\n", "\r", "\f", "\v"])
-ESCAPE_CHAR = "\\"
+QUASIQUOTE = '`'
+UNQUOTE = ','
+UNQUOTE_SPLICING = '^'
+WHITESPACE = frozenset([' ', '\t', '\n', '\r', '\f', '\v'])
+ESCAPE_CHAR = '\\'
 STRING = '"'
-COMMENT = ";"
-LINE_SEPARATORS = frozenset(["\r", "\n"])
-VARIADIC_ARG = "..."
+COMMENT = ';'
+LINE_SEPARATORS = frozenset(['\r', '\n'])
+VARIADIC_ARG = '...'
 
 #
 # functions
 #
 
 # general
-LAMBDA = "lambda"
-MACRO = "macro"
-MACRO_EXPAND = "expand"
-GENERATE_SYMBOL = "gensym"
-DEFINE = "define"
-COND = "cond"
-TYPE = "type"
+LAMBDA = 'lambda'
+MACRO = 'macro'
+MACRO_EXPAND = 'expand'
+GENERATE_SYMBOL = 'gensym'
+DEFINE = 'define'
+COND = 'cond'
+TYPE = 'type'
 
 # boolean symbols
-TRUE = "#t"
-FALSE = "#f"
+TRUE = '#t'
+FALSE = '#f'
 
 # repl
-READ = "read"
-PARSE = "parse"
-EVAL = "eval"
-LOAD = "load"
+READ = 'read'
+PARSE = 'parse'
+EVAL = 'eval'
+LOAD = 'load'
 
 # quoting
-QUOTE_LONG = "quote"
-QUASIQUOTE_LONG = "quasiquote"
-UNQUOTE_LONG = "unquote"
-UNQUOTE_SPLICING_LONG = "unquote-splicing"
+QUOTE_LONG = 'quote'
+QUASIQUOTE_LONG = 'quasiquote'
+UNQUOTE_LONG = 'unquote'
+UNQUOTE_SPLICING_LONG = 'unquote-splicing'
 
 # math
-ADD = "+"
-SUBTRACT = "-"
-MULTIPLY = "*"
-DIVIDE = "/"
-POWER = "pow"
-SIN = "sin"
-COS = "cos"
-TAN = "tan"
-ARCTAN = "atan"
-ARCTAN2 = "atan2"
+ADD = '+'
+SUBTRACT = '-'
+MULTIPLY = '*'
+DIVIDE = '/'
+POWER = 'pow'
+SIN = 'sin'
+COS = 'cos'
+TAN = 'tan'
+ARCTAN = 'atan'
+ARCTAN2 = 'atan2'
 
 # comparison
-IS = "is?"
-LISTP = "list?"
-EQUAL = "="
-GREATER_THAN = ">"
-GREATER_THAN_EQUAL = ">="
-LESS_THAN = "<"
-LESS_THAN_EQUAL = "<="
+IS = 'is?'
+LISTP = 'list?'
+EQUAL = '='
+GREATER_THAN = '>'
+GREATER_THAN_EQUAL = '>='
+LESS_THAN = '<'
+LESS_THAN_EQUAL = '<='
 
 # logic
-AND = "and"
-OR = "or"
-NOT = "not"
+AND = 'and'
+OR = 'or'
+NOT = 'not'
 
 # cons
-CONS = "cons"
-CAR = "car"
-CDR = "cdr"
+CONS = 'cons'
+CAR = 'car'
+CDR = 'cdr'
 
 # used to de-sugar various syntactic elements
 SUGAR = {
@@ -88,16 +88,16 @@ SUGAR = {
 }
 
 def tokenize(source):
-    """
+    '''
     Given a string source, returns a generator that reads it character by
     character and yields all the tokens in sequence.
-    """
+    '''
 
     # buffer where uncommitted characters live
     buf = []
 
     def flush():
-        """Returns the buffer contents as a string and clears the buffer."""
+        '''Returns the buffer contents as a string and clears the buffer.'''
 
         # get the contents of the buffer as a string
         result = ''.join(buf)

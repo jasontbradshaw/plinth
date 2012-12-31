@@ -4,10 +4,10 @@ import threading
 import errors
 
 def ensure_type(required_class, item, *rest):
-    """
+    '''
     Raises a WrongArgumentTypeError if all the items aren't instances of the
     required class/classes tuple.
-    """
+    '''
 
     if not isinstance(item, required_class):
         raise errors.WrongArgumentTypeError.build(item, required_class)
@@ -17,7 +17,7 @@ def ensure_type(required_class, item, *rest):
             raise errors.WrongArgumentTypeError.build(thing, required_class)
 
 def ensure_args(supplied_args, num_required=0, num_optional=0, is_variadic=False):
-    """
+    '''
     Enforces the argument format specified by the keyword arguments.  This
     format is: required arguments first, optional arguments next, and a single
     optional variadic arg last.
@@ -26,11 +26,11 @@ def ensure_args(supplied_args, num_required=0, num_optional=0, is_variadic=False
     defaults to  False.
 
     Raises an IncorrectArgumentCountError if the args don't match the spec.
-    """
+    '''
 
     # get the various counts we need to determine if the number of args is good
     min_args = num_required
-    max_args = float("inf") if is_variadic else num_required + num_optional
+    max_args = float('inf') if is_variadic else num_required + num_optional
 
     # determine whether the arg spec was met by the supplied arg list
     num_supplied = len(supplied_args)
@@ -39,18 +39,18 @@ def ensure_args(supplied_args, num_required=0, num_optional=0, is_variadic=False
                 num_supplied, is_variadic=is_variadic)
 
 def file_char_iter(f):
-    """Iterate over an open file one character at a time."""
+    '''Iterate over an open file one character at a time.'''
     for line in f:
         for c in line:
             yield c
 
 class ArgSpec:
-    """Holds all the arguments to a function in an easily accessible manner."""
+    '''Holds all the arguments to a function in an easily accessible manner.'''
 
     # markers for the tuples yielded in __iter__
-    REQUIRED = "required"
-    OPTIONAL = "optional"
-    VARIADIC = "variadic"
+    REQUIRED = 'required'
+    OPTIONAL = 'optional'
+    VARIADIC = 'variadic'
 
     def __init__(self, required=None, optional=None, variadic=None):
         self.__required = [] if required is None else list(required)
@@ -70,15 +70,15 @@ class ArgSpec:
         return self
 
     def validate(self, arg_values):
-        """
+        '''
         Validate the given arg_values against this spec. Raises an
         IncorrectArgumentCountError if the values can't fill the spec.
-        """
+        '''
 
         # get argument counts
         min_args = len(self.__required)
         is_variadic = self.__variadic is not None
-        max_args = float("inf") if is_variadic else min_args + len(self.__optional)
+        max_args = float('inf') if is_variadic else min_args + len(self.__optional)
 
         # enforce
         num_args = len(arg_values)
@@ -87,7 +87,7 @@ class ArgSpec:
                     min_args, max_args, num_args, is_variadic=is_variadic)
 
     def fill(self, arg_values, vararg_fun=tuple):
-        """
+        '''
         Return an ordered dict of arguments mapped to arg_values. If the
         arguments can't be filled using the given arg_values, an
         IncorrectArgumentCountError is raised.
@@ -95,7 +95,7 @@ class ArgSpec:
         If vararg_fun is specified, the variadic args are passed to it before
         being assigned to the variadic arg name in the returned dict. If left
         undefined, the tuple built-in function is used.
-        """
+        '''
 
         # make sure we can meet the internal spec
         self.validate(arg_values)
@@ -120,11 +120,11 @@ class ArgSpec:
         return arg_dict
 
     def __iter__(self):
-        """
+        '''
         Yields all args in sequece, preceded by a marker to signal what type of
         arg it is. Optional arguments are yielded as a tuple of name and
         default.
-        """
+        '''
 
         for arg in self.__required:
             yield ArgSpec.REQUIRED, arg
@@ -136,7 +136,7 @@ class ArgSpec:
             yield ArgSpec.VARIADIC, self.__variadic
 
 class ThreadSafeCounter:
-    """When called, returns increasing ints in order."""
+    '''When called, returns increasing ints in order.'''
 
     def __init__(self, count=0):
         self.count = count

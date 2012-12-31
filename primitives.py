@@ -150,21 +150,6 @@ def gt(a, b):
     util.ensure_type(numbers.Number, a, b)
     return lang.Boolean.build(a > b)
 
-def gte(a, b):
-    '''Compare two numbers using '>='.'''
-    util.ensure_type(numbers.Number, a, b)
-    return lang.Boolean.build(a >= b)
-
-def lt(a, b):
-    '''Compare two numbers using '<'.'''
-    util.ensure_type(numbers.Number, a, b)
-    return lang.Boolean.build(a < b)
-
-def lte(a, b):
-    '''Compare two numbers using '<='.'''
-    util.ensure_type(numbers.Number, a, b)
-    return lang.Boolean.build(a <= b)
-
 def not_(a):
     '''
     Returns the opposite boolean of that passed in. All things that aren't #f

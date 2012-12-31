@@ -424,9 +424,6 @@ class Interpreter(object):
         self.bind_prim(tokens.IS, primitives.is_)
         self.bind_prim(tokens.EQUAL, primitives.equal)
         self.bind_prim(tokens.GREATER_THAN, primitives.gt)
-        self.bind_prim(tokens.GREATER_THAN_EQUAL, primitives.gte)
-        self.bind_prim(tokens.LESS_THAN, primitives.lt)
-        self.bind_prim(tokens.LESS_THAN_EQUAL, primitives.lte)
 
         # cons
         self.bind_prim(tokens.CONS, primitives.cons)

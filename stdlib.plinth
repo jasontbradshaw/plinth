@@ -75,6 +75,11 @@
 ; not equal
 (defun != (a b) (not (= a b)))
 
+; comparators (= and > are primitives)
+(defun >= (a b) (or (> a b) (= a b)))
+(defun < (a b) (and (not (> a b)) (!= a b)))
+(defun <= (a b) (not (> a b)))
+
 ; return a list of the passed-in items
 (defun list (items ...) items)
 

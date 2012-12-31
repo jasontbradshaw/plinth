@@ -479,7 +479,7 @@ class Interpreter(object):
 
             except errors.ParserError:
                 # allow the user to finish entering a correct expression
-                prompt = continue_prompt
+                prompt = self.continue_prompt
                 source += os.linesep
 
             except KeyboardInterrupt:

@@ -1,4 +1,3 @@
-import math
 import numbers
 
 import errors
@@ -70,31 +69,6 @@ def power(a, b):
     util.ensure_type(numbers.Number, a, b)
     return a ** b
 
-def sin(a):
-    '''Takes the sine of a.'''
-    util.ensure_type(numbers.Number, a)
-    return math.sin(a)
-
-def cos(a):
-    '''Takes the cosine of a.'''
-    util.ensure_type(numbers.Number, a)
-    return math.cos(a)
-
-def tan(a):
-    '''Takes the tangent of a.'''
-    util.ensure_type(numbers.Number, a)
-    return math.tan(a)
-
-def atan(a):
-    '''Takes the arctangent of a.'''
-    util.ensure_type(numbers.Number, a)
-    return math.atan(a)
-
-def atan2(a):
-    '''Takes the second arctangent of a.'''
-    util.ensure_type(numbers.Number, a)
-    return math.atan2(a)
-
 def type_(e):
     '''Returns the type of an element as a string. Returns 'nil' for NIL.'''
 
@@ -149,6 +123,21 @@ def gt(a, b):
     '''Compare two numbers using '>'.'''
     util.ensure_type(numbers.Number, a, b)
     return lang.Boolean.build(a > b)
+
+def gte(a, b):
+    '''Compare two numbers using '>='.'''
+    util.ensure_type(numbers.Number, a, b)
+    return lang.Boolean.build(a >= b)
+
+def lt(a, b):
+    '''Compare two numbers using '<'.'''
+    util.ensure_type(numbers.Number, a, b)
+    return lang.Boolean.build(a < b)
+
+def lte(a, b):
+    '''Compare two numbers using '<='.'''
+    util.ensure_type(numbers.Number, a, b)
+    return lang.Boolean.build(a <= b)
 
 def not_(a):
     '''

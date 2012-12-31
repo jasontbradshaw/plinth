@@ -414,11 +414,6 @@ class Interpreter(object):
         self.bind_prim(tokens.MULTIPLY, primitives.mul)
         self.bind_prim(tokens.DIVIDE, primitives.div)
         self.bind_prim(tokens.POWER, primitives.power)
-        self.bind_prim(tokens.SIN, primitives.sin)
-        self.bind_prim(tokens.COS, primitives.cos)
-        self.bind_prim(tokens.TAN, primitives.tan)
-        self.bind_prim(tokens.ARCTAN, primitives.atan)
-        self.bind_prim(tokens.ARCTAN2, primitives.atan2)
 
         # comparison
         self.bind_prim(tokens.IS, primitives.is_)

@@ -54,11 +54,6 @@ SUBTRACT = '-'
 MULTIPLY = '*'
 DIVIDE = '/'
 POWER = 'pow'
-SIN = 'sin'
-COS = 'cos'
-TAN = 'tan'
-ARCTAN = 'atan'
-ARCTAN2 = 'atan2'
 
 # comparison
 IS = 'is?'

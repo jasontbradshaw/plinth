@@ -76,6 +76,10 @@
 (defun pos? (x) (> x 0))
 (defun neg? (x) (< x 0))
 (defun zero? (x) (= x 0))
+(defun min (a rest ...)
+    (reduce (lambda (a b) (if (< a b) a b)) a rest))
+(defun max (a rest ...)
+    (reduce (lambda (a b) (if (> a b) a b)) a rest))
 
 ; return a list of the passed-in items
 (defun list (items ...) items)

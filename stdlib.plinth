@@ -92,10 +92,12 @@
           ((> n 0) (nth (- n 1) (cdr list)))))
 
 ; reverse a list
-(defun reverse (list (accum nil))
-    (if (nil? list)
-        accum
-        (reverse (rest list) (cons (first list) accum))))
+(defun reverse (list)
+    (let ((reverse-helper (lambda (f list-h (accum nil))
+            (if (nil? list-h)
+                accum
+                (f f (rest list-h) (cons (first list-h) accum))))))
+        (reverse-helper reverse-helper list)))
 
 ; let
 (defmac let (sym-vals body)

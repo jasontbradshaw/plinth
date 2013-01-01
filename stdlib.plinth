@@ -62,16 +62,6 @@
 (defun macro? (e) (= (type e) "macro"))
 (defun callable? (e) (or (function? e) (macro? e)))
 
-; let
-(defmac let (sym-vals body)
-    `((lambda (^(map car sym-vals)) ~body) ^(map cadr sym-vals)))
-
-; recursive let
-(defmac letrec (sym-vals body)
-    (if (nil? sym-vals)
-        body
-        `(let (~(first sym-vals)) (letrec ~(rest sym-vals) ~body))))
-
 ; not equal
 (defun != (a b) (not (= a b)))
 
@@ -106,6 +96,16 @@
     (if (nil? list)
         accum
         (reverse (rest list) (cons (first list) accum))))
+
+; let
+(defmac let (sym-vals body)
+    `((lambda (^(map car sym-vals)) ~body) ^(map cadr sym-vals)))
+
+; recursive let
+(defmac letrec (sym-vals body)
+    (if (nil? sym-vals)
+        body
+        `(let (~(first sym-vals)) (letrec ~(rest sym-vals) ~body))))
 
 ; map
 (defun map (f list)

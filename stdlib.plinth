@@ -132,3 +132,22 @@
     (if (nil? list)
         initial
         (f (first list) (reduce f initial (rest list)))))
+
+; calls a function with some arguments, having converted the arguments list into
+; plain arguments.
+(defmac call (f args)
+    `(~f ^args))
+
+; identity function that simply returns its argument
+(defun identity (x) x)
+
+; returns a function that takes any number of arguments, but returns only the
+; given value.
+(defun constantly (x)
+    (lambda (args ...) x))
+
+; threads an initial argument through a series of functions in sequence
+(defmac -> (initial fs ...)
+    (if (nil? fs)
+        initial
+        `(-> (~(first fs) ~initial) ^(rest fs))))

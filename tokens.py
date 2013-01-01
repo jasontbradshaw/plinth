@@ -53,6 +53,7 @@ ADD = u'+'
 SUBTRACT = u'-'
 MULTIPLY = u'*'
 DIVIDE = u'/'
+MODULUS = u'%'
 POWER = u'pow'
 
 # comparison

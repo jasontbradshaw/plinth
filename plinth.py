@@ -413,6 +413,7 @@ class Interpreter(object):
         self.bind_prim(tokens.SUBTRACT, primitives.sub)
         self.bind_prim(tokens.MULTIPLY, primitives.mul)
         self.bind_prim(tokens.DIVIDE, primitives.div)
+        self.bind_prim(tokens.MODULUS, primitives.mod)
         self.bind_prim(tokens.POWER, primitives.power)
 
         # comparison

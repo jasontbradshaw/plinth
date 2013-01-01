@@ -64,6 +64,11 @@ def div(a, b, *rest):
 
     return quotient
 
+def mod(a, b):
+    '''Takes the modulus of a number.'''
+    util.ensure_type(numbers.Number, a, b)
+    return a % b
+
 def power(a, b):
     '''Raises a to the power of b.'''
     util.ensure_type(numbers.Number, a, b)

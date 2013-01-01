@@ -76,6 +76,8 @@
 (defun pos? (x) (> x 0))
 (defun neg? (x) (< x 0))
 (defun zero? (x) (= x 0))
+(defun even? (x) (zero? (% x 2)))
+(defun odd? (x) (= 1 (% x 2)))
 (defun min (a rest ...)
     (reduce (lambda (a b) (if (< a b) a b)) a rest))
 (defun max (a rest ...)

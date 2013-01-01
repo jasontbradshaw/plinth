@@ -84,11 +84,11 @@
 ; return a list of the passed-in items
 (defun list (items ...) items)
 
-; return the length of a proper list
-(defun length (list)
+; return the number of items in a list or other enumerable data type
+(defun count (list)
     (if (nil? list)
         0
-        (+ 1 (length (cdr list)))))
+        (+ 1 (count (cdr list)))))
 
 ; return the nth item in a list. if n is less than 0 or out of bounds, errors.
 (defun nth (n list)

@@ -88,7 +88,7 @@
 
 ; return the nth item in a list. if n is less than 0 or out of bounds, errors.
 (defun nth (n list)
-    (cond ((= n 0) (car list))
+    (cond ((zero? n) (car list))
           ((> n 0) (nth (- n 1) (cdr list)))))
 
 ; reverse a list

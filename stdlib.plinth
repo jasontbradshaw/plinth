@@ -80,6 +80,13 @@
 (defun < (a b) (and (not (> a b)) (!= a b)))
 (defun <= (a b) (not (> a b)))
 
+; math helpers
+(defun inc (x (n 1)) (+ x n))
+(defun dec (x (n 1)) (- x n))
+(defun pos? (x) (> x 0))
+(defun neg? (x) (< x 0))
+(defun zero? (x) (= x 0))
+
 ; return a list of the passed-in items
 (defun list (items ...) items)
 

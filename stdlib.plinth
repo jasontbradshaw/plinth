@@ -105,6 +105,16 @@
                 (f f (rest list-h) (cons (first list-h) accum))))))
         (reverse-helper reverse-helper list)))
 
+; concatenate some iterables together
+(defun concat (args ...)
+    (let ((concat-helper (lambda (f args-h (accum nil))
+        (cond ((nil? args-h) accum)
+              ((nil? (first args-h)) (f f (rest args-h) accum))
+              (#t (f f
+                  (cons (cdar args-h) (rest args-h))
+                  (cons (caar args-h) accum)))))))
+        (reverse (concat-helper concat-helper args))))
+
 ; let
 (defmac let (sym-vals body)
     `((lambda (^(map car sym-vals)) ~body) ^(map cadr sym-vals)))

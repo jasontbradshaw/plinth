@@ -172,7 +172,7 @@ def parse_(s):
     util.ensure_type(basestring, s)
     return lang.Cons.build(*parse(tokens.tokenize(s)))
 
-def gensym(prefix):
+def gensym(prefix='SYM__'):
     '''
     Generate a unique symbol with the given prefix in its name. Generated
     symbols have names that contain syntax elements, and hence can't be entered

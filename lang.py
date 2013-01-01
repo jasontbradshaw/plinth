@@ -253,7 +253,7 @@ class Callable(Atom):
                 a.append(str(arg))
             elif arg_type == util.ArgSpec.OPTIONAL:
                 arg, default = arg
-                a.append("(" + str(arg) + " " + str(default) + ")")
+                a.append("(" + str(arg) + " " + util.to_string(default) + ")")
             elif arg_type == util.ArgSpec.VARIADIC:
                 a.append(str(arg))
                 a.append(tokens.VARIADIC_ARG)

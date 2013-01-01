@@ -1,10 +1,10 @@
 ; define function
 (define defun (macro (name args body)
-    `(define ,name (lambda ,args ,body))))
+    `(define ~name (lambda ~args ~body))))
 
 ; define macro
 (define defmac (macro (name args body)
-    `(define ,name (macro ,args ,body))))
+    `(define ~name (macro ~args ~body))))
 
 ; shortcuts for common list accessors
 (define rest cdr)
@@ -42,8 +42,8 @@
 
 ; if
 (defmac if (test true-body false-body)
-    `(cond (,test ,true-body)
-           (#t ,false-body)))
+    `(cond (~test ~true-body)
+           (#t ~false-body)))
 
 ; nil
 (define nil '())
@@ -64,13 +64,13 @@
 
 ; let
 (defmac let (sym-vals body)
-    `((lambda (^(map car sym-vals)) ,body) ^(map cadr sym-vals)))
+    `((lambda (^(map car sym-vals)) ~body) ^(map cadr sym-vals)))
 
 ; recursive let
 (defmac letrec (sym-vals body)
     (if (nil? sym-vals)
         body
-        `(let (,(first sym-vals)) (letrec ,(rest sym-vals) ,body))))
+        `(let (~(first sym-vals)) (letrec ~(rest sym-vals) ~body))))
 
 ; not equal
 (defun != (a b) (not (= a b)))

@@ -145,8 +145,8 @@
 
 ; calls a function with some arguments, having converted the arguments list into
 ; plain arguments.
-(defmac call (f args)
-    `(~f ^args))
+(defun call (f args)
+    ((macro () `(~f ^args))))
 
 ; identity function that simply returns its argument
 (defun identity (x) x)

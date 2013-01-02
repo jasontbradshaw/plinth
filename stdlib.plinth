@@ -161,3 +161,9 @@
     (if (nil? fs)
         initial
         `(-> (~(first fs) ~initial) ^(rest fs))))
+
+; bind some arguments to a function, and return a function that allows calling
+; the original function with additional arguments.
+(defun bind (f bound-args ...)
+    (lambda (args ...)
+        (call f (concat bound-args args))))

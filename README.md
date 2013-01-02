@@ -4,15 +4,15 @@ plinth
 plinth is a simple purely-functional Lisp-like language with an interpreter
 written in Python.
 
-plinth features lexical closure, first-class functions, quoting, macros, as well
-as all the standard math operations one could want.
+plinth features lexical closure, first-class functions, quoting, run-time
+macros, as well as all the standard math operations one could want.
 
 Usage
 ----
 
 To run plinth, you'll need a modern version of Python installed (developed on
 2.7.x). Simply run `python plinth.py` from the root directory, and you'll be in
-business. You can load the in- progress standard library by passing its filename
+business. You can load the in-progress standard library by passing its filename
 (`stdlib.plinth`) into the interpreter as an argument.
 
 Reference

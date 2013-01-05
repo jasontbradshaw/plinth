@@ -24,6 +24,9 @@ class Interpreter:
         # the prompt issued to the user to gather input
         self.prompt = prompt
 
+        # delimiters for readline to use during completion
+        self.completer_delimiters = readline.get_completer_delims()
+
         # the intro displayed before the first prompt is issued
         self.intro = None
 
@@ -37,10 +40,12 @@ class Interpreter:
 
         # if a completion key is defined, set up the autocompleter
         old_completer = None
+        old_delims = readline.get_completer_delims()
         if self.complete_key:
             # store the existing completer, then revert after we're done
             old_completer = readline.get_completer()
             readline.set_completer(self.__complete)
+            readline.set_completer_delims(self.completer_delimiters)
             readline.parse_and_bind(self.complete_key + ': complete')
 
         try:
@@ -68,10 +73,11 @@ class Interpreter:
 
             self.post_loop()
 
-        # unset the autocompleter, if necessary
+        # reset the autocompleter, if necessary
         finally:
             if self.complete_key:
                 readline.set_completer(old_completer)
+                readline.set_completer_delims(old_delims)
 
     def post_intro(self, intro):
         '''
@@ -128,9 +134,9 @@ class Interpreter:
 
     def complete(self, line):
         '''
-        Receives line of user input and returns a tuple of lines that the given
-        line might complete to, in no particular order. Returns an empty tuple
-        by default.
+        Receives line of user input and returns a tuple of suggestions that the
+        given line might complete to, in no particular order. Returns an empty
+        tuple by default.
         '''
         return ()
 

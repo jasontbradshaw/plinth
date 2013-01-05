@@ -397,6 +397,18 @@ class PlinthInterpreter(interpreter.Interpreter):
 
         self.prompt = self.standard_prompt
 
+        # change completion delimiters to be specific to plinth
+        self.completer_delimiters = ''.join([
+            tokens.OPEN_PAREN,
+            tokens.CLOSE_PAREN,
+            tokens.QUOTE,
+            tokens.QUASIQUOTE,
+            tokens.UNQUOTE,
+            tokens.UNQUOTE_SPLICING,
+            tokens.ESCAPE_CHAR,
+            ''.join(tokens.WHITESPACE)
+        ])
+
     def post_intro(self, intro):
         '''Load command-line arguments as files into the global environment.'''
         for fname in sys.argv[1:]:
@@ -463,10 +475,30 @@ class PlinthInterpreter(interpreter.Interpreter):
         # check against the names currently in the global environment
         result = []
         for name in (symbol.value for symbol in self.env):
-            if approx in name:
+            if self.fuzzy_contains(name, approx):
                 result.append(name)
 
         return result
+
+    def fuzzy_contains(self, s, t):
+        '''Returns whether the first input string 'fuzzy' matches the other.'''
+
+        # equal strings always match
+        if s == t:
+            return True
+
+        # if the first string doesn't contain all the characters of the other in
+        # the order they appear, it's not a match.
+        for c in t:
+            pos = s.find(c)
+
+            # if the character isn't in the other string, we can't match
+            if pos < 0:
+                return False
+
+            s = s[pos + 1:]
+
+        return True
 
 if __name__ == '__main__':
     # the default global environment

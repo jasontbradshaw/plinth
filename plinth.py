@@ -5,6 +5,7 @@ import sys
 import traceback
 
 import errors
+import interpreter
 import lang
 import primitives
 import tokens
@@ -378,134 +379,147 @@ def evaluate(sexp, env):
             # evaluate args and call the function with them
             return function(evaluate, *[evaluate(arg, env) for arg in args])
 
-class Interpreter(object):
+class PlinthInterpreter(interpreter.Interpreter):
     '''Implements the standard plinth interpreter.'''
 
-    def __init__(self, standard_prompt='> ', continue_prompt=': '):
-        self.standard_prompt = standard_prompt
-        self.continue_prompt = continue_prompt
+    def __init__(self, env=lang.Environment(None)):
+        interpreter.Interpreter.__init__(self)
 
-        # create the global environment for the interpreter
-        self.env = lang.Environment(None)
+        # the global environment
+        self.env = env
 
-        # bind functions that need special treatment during evaluation
-        self.env[lang.Symbol(tokens.QUOTE_LONG)] = primitives.quote
-        self.env[lang.Symbol(tokens.QUASIQUOTE_LONG)] = primitives.quasiquote
-        self.env[lang.Symbol(tokens.LAMBDA)] = primitives.lambda_
-        self.env[lang.Symbol(tokens.MACRO)] = primitives.macro
-        self.env[lang.Symbol(tokens.MACRO_EXPAND)] = primitives.expand
-        self.env[lang.Symbol(tokens.DEFINE)] = primitives.define
-        self.env[lang.Symbol(tokens.COND)] = primitives.cond
-        self.env[lang.Symbol(tokens.AND)] = primitives.and_
-        self.env[lang.Symbol(tokens.OR)] = primitives.or_
-        self.env[lang.Symbol(tokens.EVAL)] = primitives.eval_
-        self.env[lang.Symbol(tokens.LOAD)] = primitives.load
+        # intro on interpreter startup
+        self.intro = 'plinth 0.2\n-----------'
 
-        # repl
-        self.bind_prim(tokens.READ, primitives.read)
-        self.bind_prim(tokens.PARSE, primitives.parse_)
+        self.standard_prompt = '> '
+        self.continue_prompt = ': '
+        self.source = ''
 
-        # logical
-        self.bind_prim(tokens.NOT, primitives.not_)
+        self.prompt = self.standard_prompt
 
-        # math
-        self.bind_prim(tokens.ADD, primitives.add)
-        self.bind_prim(tokens.SUBTRACT, primitives.sub)
-        self.bind_prim(tokens.MULTIPLY, primitives.mul)
-        self.bind_prim(tokens.DIVIDE, primitives.div)
-        self.bind_prim(tokens.MODULUS, primitives.mod)
-        self.bind_prim(tokens.POWER, primitives.power)
-
-        # comparison
-        self.bind_prim(tokens.IS, primitives.is_)
-        self.bind_prim(tokens.EQUAL, primitives.equal)
-        self.bind_prim(tokens.GREATER_THAN, primitives.gt)
-
-        # cons
-        self.bind_prim(tokens.CONS, primitives.cons)
-        self.bind_prim(tokens.CAR, primitives.car)
-        self.bind_prim(tokens.CDR, primitives.cdr)
-        self.bind_prim(tokens.LISTP, lang.Cons.is_list)
-
-        # meta
-        self.bind_prim(tokens.GENERATE_SYMBOL, primitives.gensym)
-        self.bind_prim(tokens.TYPE, primitives.type_)
-
-    def bind_prim(self, token, function):
-        '''Binds a primitive function to a token in the global environment.'''
-        if self.env is not None:
-            s = lang.Symbol(token)
-            f = lang.PrimitiveFunction(function, token)
-            self.env.put(s, f)
-
-    def repl(self):
-        '''
-        The standard interpreter loop.
-
-        Reads input, parses it, evaluates it, and prints the result to the
-        console.
-
-        Continues to run until the user exits by sending an EOF, then returns.
-        '''
-
-        # the current source code that's been entered
-        source = ''
-
-        # the current state of the prompt
-        prompt = self.standard_prompt
-
-        print 'plinth 0.2'
-        print '-----------'
-
-        # load all provided files into the global environment on interpreter start
+    def post_intro(self, intro):
+        '''Load command-line arguments as files into the global environment.'''
         for fname in sys.argv[1:]:
             # evaluate every expression in the file in sequence, top to bottom
             with open(os.path.abspath(fname), 'r') as f:
                 for result in parse(tokens.tokenize(util.file_char_iter(f))):
                     evaluate(result, self.env)
-            print "loaded '" + os.path.abspath(fname) + "'"
+            self.stdout.write("loaded '" + os.path.abspath(fname) + "'" +
+                    os.linesep)
 
-        while 1:
-            try:
-                # get input from user and try to tokenize, parse, and print it
-                source += raw_input(prompt)
+    def cmd(self, source):
+        '''
+        The standard interpreter loop. Reads input, parses it, evaluates it, and
+        writes the result to stdout. Continues to run until the user exits by
+        sending an EOF.
+        '''
 
-                # evaluate every entered expression sequentially
-                for result in parse(tokens.tokenize(source)):
-                    print util.to_string(evaluate(result, self.env))
+        # exit when an EOF is received
+        if isinstance(source, EOFError):
+            sys.stdout.write(os.linesep)
+            return True
+        elif isinstance(source, KeyboardInterrupt):
+            # clear the line when an interrupt is received
+            sys.stdout.write(os.linesep)
+            return
 
-                # reset the source and prompt on a successful evaluation
-                source = ''
-                prompt = self.standard_prompt
+        # otherwise, parse and evaluate the source code
+        try:
+            self.source += source
 
-            except errors.ParserError:
-                # allow the user to finish entering a correct expression
-                prompt = self.continue_prompt
-                source += os.linesep
+            # evaluate every entered expression sequentially
+            for result in parse(tokens.tokenize(self.source)):
+                self.stdout.write(util.to_string(evaluate(result, self.env)) +
+                        os.linesep)
 
-            except KeyboardInterrupt:
-                # reset input on Ctrl+C
-                prompt = self.standard_prompt
-                source = u''
-                print
-            except EOFError:
-                # exit on Ctrl+D
-                print
-                return
-            except Exception, e:
-                # print all other problems and clear source
-                traceback.print_exc()
+            # reset the prompt and source
+            self.prompt = self.standard_prompt
+            self.source = u''
 
-                # reset the source and prompt for the next parse
-                source = u''
-                prompt = self.standard_prompt
+        # allow the user to finish entering a correct expression
+        except errors.ParserError:
+            self.prompt = self.continue_prompt
+            self.source += os.linesep
 
+        # write all other problems and clear source
+        except Exception, e:
+            traceback.print_exc(file=self.stdout)
+
+            # reset the source and prompt for the next parse
+            self.source = u''
+            self.prompt = self.standard_prompt
+
+    def complete(self, line):
+        '''Suggest completions based on global symbol names.'''
+
+        # do no completions if the line is empty
+        if line == '':
+            return ()
+
+        # get a decent approximation of the last symbol being entered
+        approx = line.split()[-1]
+        approx = approx.split(tokens.OPEN_PAREN)[-1]
+
+        # check against the names currently in the global environment
+        result = []
+        for name in (symbol.value for symbol in self.env):
+            if approx in name:
+                result.append(name)
+
+        return result
 
 if __name__ == '__main__':
-    i = Interpreter()
+    # the default global environment
+    env = lang.Environment(None)
 
-    # run until the user quits
-    i.repl()
+    def bind_prim(token, function):
+        '''Binds a primitive function to a token in the global environment.'''
+        s = lang.Symbol(token)
+        f = lang.PrimitiveFunction(function, token)
+        env.put(s, f)
 
-    # exit with success
-    sys.exit(0)
+    # bind functions that need special treatment during evaluation
+    env[lang.Symbol(tokens.QUOTE_LONG)] = primitives.quote
+    env[lang.Symbol(tokens.QUASIQUOTE_LONG)] = primitives.quasiquote
+    env[lang.Symbol(tokens.LAMBDA)] = primitives.lambda_
+    env[lang.Symbol(tokens.MACRO)] = primitives.macro
+    env[lang.Symbol(tokens.MACRO_EXPAND)] = primitives.expand
+    env[lang.Symbol(tokens.DEFINE)] = primitives.define
+    env[lang.Symbol(tokens.COND)] = primitives.cond
+    env[lang.Symbol(tokens.AND)] = primitives.and_
+    env[lang.Symbol(tokens.OR)] = primitives.or_
+    env[lang.Symbol(tokens.EVAL)] = primitives.eval_
+    env[lang.Symbol(tokens.LOAD)] = primitives.load
+
+    # repl
+    bind_prim(tokens.READ, primitives.read)
+    bind_prim(tokens.PARSE, primitives.parse_)
+
+    # logical
+    bind_prim(tokens.NOT, primitives.not_)
+
+    # math
+    bind_prim(tokens.ADD, primitives.add)
+    bind_prim(tokens.SUBTRACT, primitives.sub)
+    bind_prim(tokens.MULTIPLY, primitives.mul)
+    bind_prim(tokens.DIVIDE, primitives.div)
+    bind_prim(tokens.MODULUS, primitives.mod)
+    bind_prim(tokens.POWER, primitives.power)
+
+    # comparison
+    bind_prim(tokens.IS, primitives.is_)
+    bind_prim(tokens.EQUAL, primitives.equal)
+    bind_prim(tokens.GREATER_THAN, primitives.gt)
+
+    # cons
+    bind_prim(tokens.CONS, primitives.cons)
+    bind_prim(tokens.CAR, primitives.car)
+    bind_prim(tokens.CDR, primitives.cdr)
+    bind_prim(tokens.LISTP, lang.Cons.is_list)
+
+    # meta
+    bind_prim(tokens.GENERATE_SYMBOL, primitives.gensym)
+    bind_prim(tokens.TYPE, primitives.type_)
+
+    # run an interpreter until the user quits
+    PlinthInterpreter(env).repl()

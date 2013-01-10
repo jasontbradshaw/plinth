@@ -391,6 +391,9 @@ class PlinthInterpreter(interpreter.Interpreter):
         # intro on interpreter startup
         self.intro = 'plinth 0.2\n-----------'
 
+        # the path to the standard library
+        self.stdlib_path = './stdlib.plinth'
+
         self.standard_prompt = '> '
         self.continue_prompt = ': '
         self.source = ''
@@ -409,15 +412,29 @@ class PlinthInterpreter(interpreter.Interpreter):
             ''.join(tokens.WHITESPACE)
         ])
 
+    def parse_file(self, path):
+        '''Reads a file, parses it, and returns the AST.'''
+        with open(os.path.abspath(path), 'r') as f:
+            return parse(tokens.tokenize(util.file_char_iter(f)))
+
     def post_intro(self, intro):
-        '''Load command-line arguments as files into the global environment.'''
-        for fname in sys.argv[1:]:
-            # evaluate every expression in the file in sequence, top to bottom
-            with open(os.path.abspath(fname), 'r') as f:
-                for result in parse(tokens.tokenize(util.file_char_iter(f))):
+        '''Load the standard library and any files passed in as arguments.'''
+        # load the standard library, if available
+        if os.path.exists(self.stdlib_path):
+            for result in self.parse_file(self.stdlib_path):
+                evaluate(result, self.env)
+
+        # evaluate every expression in all files into the global environment
+        for path in sys.argv[1:]:
+            if os.path.exists(self.stdlib_path):
+                for result in self.parse_file(path):
                     evaluate(result, self.env)
-            self.stdout.write("loaded '" + os.path.abspath(fname) + "'" +
-                    os.linesep)
+                self.stdout.write("loaded '" + os.path.abspath(fname) + "'" +
+                        os.linesep)
+            else:
+                # tell that we couldn't find the file
+                self.stdout.write("could not find '" + os.path.abspath(fname) +
+                        "'" + os.linesep)
 
     def cmd(self, source):
         '''

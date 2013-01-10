@@ -426,15 +426,15 @@ class PlinthInterpreter(interpreter.Interpreter):
 
         # evaluate every expression in all files into the global environment
         for path in sys.argv[1:]:
-            if os.path.exists(self.stdlib_path):
+            path = os.path.abspath(path)
+
+            if os.path.exists(path):
                 for result in self.parse_file(path):
                     evaluate(result, self.env)
-                self.stdout.write("loaded '" + os.path.abspath(fname) + "'" +
-                        os.linesep)
+                self.stdout.write("loaded '" + path + "'" + os.linesep)
             else:
                 # tell that we couldn't find the file
-                self.stdout.write("could not find '" + os.path.abspath(fname) +
-                        "'" + os.linesep)
+                self.stdout.write("could not find '" + path + "'" + os.linesep)
 
     def cmd(self, source):
         '''

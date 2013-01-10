@@ -448,7 +448,9 @@ class PlinthInterpreter(interpreter.Interpreter):
             sys.stdout.write(os.linesep)
             return True
         elif isinstance(source, KeyboardInterrupt):
-            # clear the line when an interrupt is received
+            # clear the line and reset the source when an interrupt is received
+            self.prompt = self.standard_prompt
+            self.source = u''
             sys.stdout.write(os.linesep)
             return
 

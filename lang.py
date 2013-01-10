@@ -104,12 +104,12 @@ class Cons:
             return ''
 
         if item.cdr is NIL:
-            return str(item.car)
+            return util.to_string(item.car)
 
         if not isinstance(item.cdr, Cons):
-            return str(item.car) + ' . ' + str(item.cdr)
+            return util.to_string(item.car) + ' . ' + util.to_string(item.cdr)
 
-        return str(item.car) + ' ' + self.__str_helper(item.cdr)
+        return util.to_string(item.car) + ' ' + self.__str_helper(item.cdr)
 
     def __str__(self):
         return '(' + self.__str_helper(self) + ')'

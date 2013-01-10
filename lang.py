@@ -12,7 +12,7 @@ class Atom:
         self.value = value
 
     def __str__(self):
-        return str(self.value)
+        return unicode(self.value)
 
     def __repr__(self):
         v = self.value if hasattr(self, 'value') else None
@@ -101,22 +101,22 @@ class Cons:
     def __str_helper(self, item):
         # nil has no contents
         if item is NIL:
-            return ''
+            return u''
 
         if item.cdr is NIL:
             return util.to_string(item.car)
 
         if not isinstance(item.cdr, Cons):
-            return util.to_string(item.car) + ' . ' + util.to_string(item.cdr)
+            return util.to_string(item.car) + u' . ' + util.to_string(item.cdr)
 
-        return util.to_string(item.car) + ' ' + self.__str_helper(item.cdr)
+        return util.to_string(item.car) + u' ' + self.__str_helper(item.cdr)
 
     def __str__(self):
-        return '(' + self.__str_helper(self) + ')'
+        return u'(' + self.__str_helper(self) + ')'
 
     def __repr__(self):
         return (self.__class__.__name__ +
-               '(' + repr(self.car) + ', ' + repr(self.cdr) + ')')
+               u'(' + repr(self.car) + ', ' + repr(self.cdr) + ')')
 
     def __len__(self):
         # nil is the empty list
@@ -150,7 +150,7 @@ class Cons:
                 item = item.cdr
             else:
                 raise errors.WrongArgumentTypeError('not a proper list: ' +
-                        str(self))
+                        unicode(self))
 
 # the singleton 'nil' value, an empty Cons: we define it here so Cons can use it
 NIL = Cons(None, None)
@@ -161,7 +161,7 @@ class Symbol(Atom):
     def __init__(self, value):
         '''Symbols are stored and looked up by their string names.'''
 
-        Atom.__init__(self, str(value))
+        Atom.__init__(self, unicode(value))
 
     def __hash__(self):
         return hash(self.value)
@@ -172,9 +172,10 @@ class Symbol(Atom):
 class Callable(Atom):
     '''A base class for object in our language that can be 'called'.'''
 
-    def __init__(self, name=None):
+    def __init__(self, name=None, docstring=None):
         '''A name can later be set for display purposes.'''
         Atom.__init__(self, name)
+        self.docstring = docstring
 
     @staticmethod
     def build_argspec(evaluate, env, args):
@@ -237,11 +238,11 @@ class Callable(Atom):
         use to build the arguments list.
         '''
 
-        s = u'<' + str(kind)
+        s = u'<' + unicode(kind)
 
         # set the function name if possible
         if name is not None:
-            s += ' ' + str(name)
+            s += ' ' + unicode(name)
 
         s += ' ('
 
@@ -249,12 +250,12 @@ class Callable(Atom):
         a = []
         for arg_type, arg in argspec:
             if arg_type == util.ArgSpec.REQUIRED:
-                a.append(str(arg))
+                a.append(unicode(arg))
             elif arg_type == util.ArgSpec.OPTIONAL:
                 arg, default = arg
-                a.append('(' + str(arg) + ' ' + util.to_string(default) + ')')
+                a.append('(' + unicode(arg) + ' ' + util.to_string(default) + ')')
             elif arg_type == util.ArgSpec.VARIADIC:
-                a.append(str(arg))
+                a.append(unicode(arg))
                 a.append(tokens.VARIADIC_ARG)
             else:
                 raise ValueError('Unhandled arg type: ' + arg_type)
@@ -449,10 +450,10 @@ class Environment:
             self[key] = other_dict[key]
 
     def __str__(self):
-        return str(self.items)
+        return unicode(self.items)
 
     def __repr__(self):
-        return (self.__class__.__name__ + '(' +
+        return (self.__class__.__name__ + u'(' +
                 repr(self.parent) + ', ' + repr(self.items) + ')')
 
     def __getitem__(self, symbol):

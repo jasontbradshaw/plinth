@@ -1,5 +1,8 @@
 import collections
 
+import lang
+import tokens
+
 class ArgSpec:
     '''Holds all the arguments to a function in an easily accessible manner.'''
 
@@ -74,6 +77,58 @@ class ArgSpec:
             arg_dict[self.__variadic] = vararg_fun(a for a in reversed(arg_stack))
 
         return arg_dict
+
+    @staticmethod
+    def build(evaluate, env, args):
+        '''
+        Parses the given args according to the language specification and
+        returns an ArgSpec object for them. Raises an error if parsing fails.
+        '''
+
+        # the ArgSpec we'll return after filling it
+        spec = ArgSpec()
+
+        # convert to a list for easy access/modification
+        args = list(args)
+
+        # consume the variadic arg first, if there is one
+        if len(args) > 1:
+            v = args[-1]
+            vararg_symbol = args[-2]
+            if isinstance(v, lang.Symbol) and v.value == tokens.VARIADIC_ARG:
+                # store the vararg symbol, then remove its cruft from the list
+                spec.variadic(vararg_symbol)
+                del args[-2:]
+
+        # consume optional args next
+        while len(args) > 0 and lang.Cons.is_list(args[-1]):
+            # get the next argument in the list
+            opt_arg = args.pop()
+
+            # make sure we got a symbol and an expression for the optional arg
+            if len(opt_arg) != 2 or not isinstance(opt_arg.car, lang.Symbol):
+                raise errors.WrongArgumentTypeError('optional arguments must ' +
+                        'consist of a single symbol and a single expression')
+
+            # evaluate the expression and store the result in the spec
+            symbol = opt_arg.car
+            expression = opt_arg.cdr.car
+            spec.optional(symbol, evaluate(expression, env))
+
+        # consume remaining required args
+        for symbol in args:
+            # optional args are no longer allowed
+            if lang.Cons.is_list(symbol):
+                raise errors.WrongArgumentTypeError('optional arguments must ' +
+                        'come after required arguments and before any ' +
+                        'variadic argument.')
+            # deal with arguments that aren't symbols
+            elif not isinstance(symbol, lang.Symbol):
+                raise errors.WrongArgumentTypeError.build(symbol, lang.Symbol)
+
+            spec.required(symbol)
+
+        return spec
 
     def __iter__(self):
         '''

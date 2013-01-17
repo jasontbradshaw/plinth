@@ -185,58 +185,6 @@ class Callable(Atom):
         self.docstring = docstring
 
     @staticmethod
-    def build_argspec(evaluate, env, args):
-        '''
-        Parses the given args according to the language specification and
-        returns an ArgSpec object for them. Raises an error if parsing fails.
-        '''
-
-        # the ArgSpec we'll return after filling it
-        spec = argspec.ArgSpec()
-
-        # convert to a list for easy access/modification
-        args = list(args)
-
-        # consume the variadic arg first, if there is one
-        if len(args) > 1:
-            v = args[-1]
-            vararg_symbol = args[-2]
-            if isinstance(v, Symbol) and v.value == tokens.VARIADIC_ARG:
-                # store the vararg symbol, then remove its cruft from the list
-                spec.variadic(vararg_symbol)
-                del args[-2:]
-
-        # consume optional args next
-        while len(args) > 0 and Cons.is_list(args[-1]):
-            # get the next argument in the list
-            opt_arg = args.pop()
-
-            # make sure we got a symbol and an expression for the optional arg
-            if len(opt_arg) != 2 or not isinstance(opt_arg.car, Symbol):
-                raise errors.WrongArgumentTypeError('optional arguments must ' +
-                        'consist of a single symbol and a single expression')
-
-            # evaluate the expression and store the result in the spec
-            symbol = opt_arg.car
-            expression = opt_arg.cdr.car
-            spec.optional(symbol, evaluate(expression, env))
-
-        # consume remaining required args
-        for symbol in args:
-            # optional args are no longer allowed
-            if Cons.is_list(symbol):
-                raise errors.WrongArgumentTypeError('optional arguments must ' +
-                        'come after required arguments and before any ' +
-                        'variadic argument.')
-            # deal with arguments that aren't symbols
-            elif not isinstance(symbol, Symbol):
-                raise errors.WrongArgumentTypeError.build(symbol, Symbol)
-
-            spec.required(symbol)
-
-        return spec
-
-    @staticmethod
     def build_string(kind, name, spec):
         '''
         Build a string to display a typical callable in the interpreter. kind is
@@ -302,7 +250,7 @@ class Function(Callable):
 
         assert isinstance(parent, Environment)
 
-        self.spec = Callable.build_argspec(evaluate, parent, args)
+        self.spec = argspec.ArgSpec.build(evaluate, parent, args)
         self.body = body
         self.parent = parent
 
@@ -388,7 +336,7 @@ class Macro(Callable):
 
     def __init__(self, evaluate, env, args, body, name=None):
 
-        self.spec = Callable.build_argspec(evaluate, env, args)
+        self.spec = argspec.ArgSpec.build(evaluate, env, args)
         self.body = body
 
         Callable.__init__(self, name)

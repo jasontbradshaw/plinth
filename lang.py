@@ -122,16 +122,13 @@ class Cons:
         # nil is the empty list
         if self is NIL:
             return 0
-
         return sum(1 for i in self)
 
     def __eq__(self, other):
         '''Compare recursively to another iterable.'''
-
         for si, oi in itertools.izip(self, other):
             if si != oi:
                 return False
-
         return True
 
     def __iter__(self):
@@ -151,6 +148,15 @@ class Cons:
             else:
                 raise errors.WrongArgumentTypeError('not a proper list: ' +
                         unicode(self))
+
+    def __getitem__(self, index):
+        '''Allow indexing into the list.'''
+        index += len(self) if index < 0 else 0
+        for i, item in enumerate(self):
+            if i == index:
+                return item
+        raise IndexError(self.__class__.__name__.lower() +
+                ' index out of range')
 
 # the singleton 'nil' value, an empty Cons: we define it here so Cons can use it
 NIL = Cons(None, None)

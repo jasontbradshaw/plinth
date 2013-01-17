@@ -1,6 +1,7 @@
 import inspect
 import itertools
 
+import argspec
 import errors
 import tokens
 import util
@@ -191,7 +192,7 @@ class Callable(Atom):
         '''
 
         # the ArgSpec we'll return after filling it
-        argspec = util.ArgSpec()
+        spec = argspec.ArgSpec()
 
         # convert to a list for easy access/modification
         args = list(args)
@@ -202,7 +203,7 @@ class Callable(Atom):
             vararg_symbol = args[-2]
             if isinstance(v, Symbol) and v.value == tokens.VARIADIC_ARG:
                 # store the vararg symbol, then remove its cruft from the list
-                argspec.variadic(vararg_symbol)
+                spec.variadic(vararg_symbol)
                 del args[-2:]
 
         # consume optional args next
@@ -218,7 +219,7 @@ class Callable(Atom):
             # evaluate the expression and store the result in the spec
             symbol = opt_arg.car
             expression = opt_arg.cdr.car
-            argspec.optional(symbol, evaluate(expression, env))
+            spec.optional(symbol, evaluate(expression, env))
 
         # consume remaining required args
         for symbol in args:
@@ -231,16 +232,16 @@ class Callable(Atom):
             elif not isinstance(symbol, Symbol):
                 raise errors.WrongArgumentTypeError.build(symbol, Symbol)
 
-            argspec.required(symbol)
+            spec.required(symbol)
 
-        return argspec
+        return spec
 
     @staticmethod
-    def build_string(kind, name, argspec):
+    def build_string(kind, name, spec):
         '''
         Build a string to display a typical callable in the interpreter. kind is
         the object type to use, name is the (optional) name to give this
-        specific instance of the object, and argspec is the ArgSpec object to
+        specific instance of the object, and spec is the ArgSpec object to
         use to build the arguments list.
         '''
 
@@ -254,13 +255,13 @@ class Callable(Atom):
 
         # compose a list of all arg symbols
         a = []
-        for arg_type, arg in argspec:
-            if arg_type == util.ArgSpec.REQUIRED:
+        for arg_type, arg in spec:
+            if arg_type == argspec.ArgSpec.REQUIRED:
                 a.append(unicode(arg))
-            elif arg_type == util.ArgSpec.OPTIONAL:
+            elif arg_type == argspec.ArgSpec.OPTIONAL:
                 arg, default = arg
                 a.append('(' + unicode(arg) + ' ' + util.to_string(default) + ')')
-            elif arg_type == util.ArgSpec.VARIADIC:
+            elif arg_type == argspec.ArgSpec.VARIADIC:
                 a.append(unicode(arg))
                 a.append(tokens.VARIADIC_ARG)
             else:
@@ -301,14 +302,14 @@ class Function(Callable):
 
         assert isinstance(parent, Environment)
 
-        self.argspec = Callable.build_argspec(evaluate, parent, args)
+        self.spec = Callable.build_argspec(evaluate, parent, args)
         self.body = body
         self.parent = parent
 
         Callable.__init__(self, name)
 
     def __str__(self):
-        return Callable.build_string('function', self.value, self.argspec)
+        return Callable.build_string('function', self.value, self.spec)
 
     def __call__(self, evaluate, *arg_values):
         '''
@@ -320,7 +321,7 @@ class Function(Callable):
         env = Environment(self.parent)
 
         # fill it with the arg spec's values (throws an error if impossible)
-        env.update(self.argspec.fill(arg_values, Cons.build_list))
+        env.update(self.spec.fill(arg_values, Cons.build_list))
 
         # evaluate our body using the new environment and return the result
         return evaluate(self.body, env)
@@ -344,7 +345,7 @@ class PrimitiveFunction(Function):
         args, vararg, _, defaults = inspect.getargspec(method)
         defaults = () if defaults is None else defaults
 
-        self.argspec = util.ArgSpec()
+        self.spec = argspec.ArgSpec()
 
         # get the counts for our respective arg types
         num_required = len(args) - len(defaults)
@@ -352,21 +353,21 @@ class PrimitiveFunction(Function):
 
         # add required arguments
         for arg in args[:num_required]:
-            self.argspec.required(arg)
+            self.spec.required(arg)
 
         # add optional arguments, which come after required ones
         for arg, default in itertools.izip(args[num_required:], defaults):
-            self.argspec.optional(arg, default)
+            self.spec.optional(arg, default)
 
         # add the variadic arg if it exists
         if vararg is not None:
-            self.argspec.variadic(vararg)
+            self.spec.variadic(vararg)
 
         Callable.__init__(self, name)
 
     def __str__(self):
         return Callable.build_string('primitive-function', self.value,
-                self.argspec)
+                self.spec)
 
     def __call__(self, evaluate, *arg_values):
         '''
@@ -375,7 +376,7 @@ class PrimitiveFunction(Function):
         only for method-parity with the Function class.
         '''
 
-        self.argspec.validate(arg_values)
+        self.spec.validate(arg_values)
         return self.method(*arg_values)
 
 class Macro(Callable):
@@ -387,13 +388,13 @@ class Macro(Callable):
 
     def __init__(self, evaluate, env, args, body, name=None):
 
-        self.argspec = Callable.build_argspec(evaluate, env, args)
+        self.spec = Callable.build_argspec(evaluate, env, args)
         self.body = body
 
         Callable.__init__(self, name)
 
     def __str__(self):
-        return Callable.build_string('macro', self.value, self.argspec)
+        return Callable.build_string('macro', self.value, self.spec)
 
     def __call__(self, evaluate, env, *arg_sexps):
         '''
@@ -403,7 +404,7 @@ class Macro(Callable):
 
         # map symbols to their replacement expressions in a new environment
         expand_env = Environment(env)
-        expand_env.update(self.argspec.fill(arg_sexps, Cons.build_list))
+        expand_env.update(self.spec.fill(arg_sexps, Cons.build_list))
 
         # evaluate our body in the created environment
         return evaluate(self.body, expand_env)

@@ -152,10 +152,8 @@ class Cons:
 
     def __getitem__(self, index):
         '''Allow indexing into the list.'''
-        length = len(self)
-
         if isinstance(index, slice):
-            if index.stop < length:
+            if index.stop < len(self):
                 raise IndexError(self.__class__.__name__.lower() +
                         ' does not support end indexes')
             s = self
@@ -163,7 +161,7 @@ class Cons:
                 s = s.cdr
             return s
         else:
-            index += length if index < 0 else 0
+            index += len(self) if index < 0 else 0
             for i, item in enumerate(self):
                 if i == index:
                     return item

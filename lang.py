@@ -158,6 +158,8 @@ class Cons:
                         ' does not support end indexes')
             s = self
             for i in xrange(index.start):
+                if s is NIL:
+                    break
                 s = s.cdr
             return s
         else:

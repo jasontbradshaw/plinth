@@ -152,12 +152,23 @@ class Cons:
 
     def __getitem__(self, index):
         '''Allow indexing into the list.'''
-        index += len(self) if index < 0 else 0
-        for i, item in enumerate(self):
-            if i == index:
-                return item
-        raise IndexError(self.__class__.__name__.lower() +
-                ' index out of range')
+        length = len(self)
+
+        if isinstance(index, slice):
+            if index.stop < length:
+                raise IndexError(self.__class__.__name__.lower() +
+                        ' does not support end indexes')
+            s = self
+            for i in xrange(index.start):
+                s = s.cdr
+            return s
+        else:
+            index += length if index < 0 else 0
+            for i, item in enumerate(self):
+                if i == index:
+                    return item
+            raise IndexError(self.__class__.__name__.lower() +
+                    ' index out of range')
 
 # the singleton 'nil' value, an empty Cons: we define it here so Cons can use it
 NIL = Cons(None, None)

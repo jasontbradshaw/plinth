@@ -357,7 +357,7 @@ class Macro(Callable):
         # evaluate our body in the created environment
         return evaluate(self.body, expand_env)
 
-class Environment:
+class Environment(dict):
     '''
     A scope that holds variables mapped to their values. Allows us to easily
     package execution state.
@@ -375,10 +375,9 @@ class Environment:
         # the environment that contains this environment
         self.parent = parent
 
-        # where we keep our symbol name to value mappings
-        self.items = {}
+        dict.__init__(self)
 
-    def find(self, symbol):
+    def __getitem__(self, symbol):
         '''
         Attempts to locate a given symbol by name in the current environment,
         then in every environment up the parent chain if the symbol could not be
@@ -386,42 +385,10 @@ class Environment:
         error.
         '''
 
-        # make sure we're getting a symbol
-        assert isinstance(symbol, Symbol)
-
         if symbol in self:
-            return self[symbol]
+            return self.get(symbol)
         elif self.parent is not None:
-            return self.parent.find(symbol)
+            return self.parent[symbol]
 
         raise errors.SymbolNotFoundError.build(symbol)
 
-    def put(self, symbol, value):
-        '''Shortcut for setting symbols to values.'''
-        return self.__setitem__(symbol, value)
-
-    def update(self, other_dict):
-        for key in other_dict:
-            self[key] = other_dict[key]
-
-    def __str__(self):
-        return unicode(self.items)
-
-    def __repr__(self):
-        return (self.__class__.__name__ + u'(' +
-                repr(self.parent) + ', ' + repr(self.items) + ')')
-
-    def __getitem__(self, symbol):
-        assert isinstance(symbol, Symbol)
-        return self.items[symbol]
-
-    def __setitem__(self, symbol, value):
-        assert isinstance(symbol, Symbol)
-        self.items[symbol] = value
-
-    def __contains__(self, symbol):
-        assert isinstance(symbol, Symbol)
-        return symbol in self.items
-
-    def __iter__(self):
-        return self.items.__iter__()

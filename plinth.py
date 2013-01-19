@@ -213,7 +213,7 @@ def evaluate(sexp, env):
     # symbol
     if isinstance(sexp, lang.Symbol):
         # look it up in the environment for its value
-        return env.find(sexp)
+        return env[sexp]
 
     # atom (not a literal list)
     elif not lang.Cons.is_list(sexp):
@@ -527,7 +527,7 @@ if __name__ == '__main__':
         '''Binds a primitive function to a token in the global environment.'''
         s = lang.Symbol(token)
         f = lang.PrimitiveFunction(function, token)
-        env.put(s, f)
+        env[s] = f
 
     # bind functions that need special treatment during evaluation
     env[lang.Symbol(tokens.QUOTE_LONG)] = primitives.quote

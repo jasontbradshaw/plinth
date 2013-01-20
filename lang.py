@@ -190,10 +190,9 @@ class Symbol(Atom):
 class Callable(Atom):
     '''A base class for object in our language that can be 'called'.'''
 
-    def __init__(self, name=None, docstring=None):
+    def __init__(self, name=None):
         '''A name can later be set for display purposes.'''
         Atom.__init__(self, name)
-        self.docstring = docstring
 
     @staticmethod
     def build_string(kind, name, spec):

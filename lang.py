@@ -245,7 +245,7 @@ class Function(Callable):
     arguments, have a body, and are evaluated in some context.
     '''
 
-    def __init__(self, evaluate, parent, args, body, name=None):
+    def __init__(self, parent, spec, body, name=None):
         '''
         Creates a function given a list of its arguments, its body, and
         its parent environment, i.e. the environment it was created and will be
@@ -256,11 +256,9 @@ class Function(Callable):
         the expression is evaluated immediately.
         '''
 
-        # NOTE: arguments MUST come in the order: required, optional, variadic
-
         assert isinstance(parent, Environment)
 
-        self.spec = argspec.ArgSpec.build(evaluate, parent, args)
+        self.spec = spec
         self.body = body
         self.parent = parent
 
@@ -268,21 +266,6 @@ class Function(Callable):
 
     def __str__(self):
         return Callable.build_string('function', self.value, self.spec)
-
-    def __call__(self, evaluate, *arg_values):
-        '''
-        Evaluate this function given a list of values to use for its arguments
-        and return the result.
-        '''
-
-        # create a new environment with the parent set as our parent environment
-        env = Environment(self.parent)
-
-        # fill it with the arg spec's values (throws an error if impossible)
-        env.update(self.spec.fill(arg_values, Cons.build_list))
-
-        # evaluate our body using the new environment and return the result
-        return evaluate(self.body, env)
 
 class PrimitiveFunction(Function):
     '''
@@ -327,11 +310,10 @@ class PrimitiveFunction(Function):
         return Callable.build_string('primitive-function', self.value,
                 self.spec)
 
-    def __call__(self, evaluate, *arg_values):
+    def __call__(self, *arg_values):
         '''
         Calls our internal method on the given arguments, ensuring that the
-        correct number of values was passed in. The evaluate argument is present
-        only for method-parity with the Function class.
+        correct number of values was passed in.
         '''
 
         self.spec.validate(arg_values)
@@ -344,28 +326,15 @@ class Macro(Callable):
     into the macro body.
     '''
 
-    def __init__(self, evaluate, env, args, body, name=None):
+    def __init__(self, spec, body, name=None):
 
-        self.spec = argspec.ArgSpec.build(evaluate, env, args)
+        self.spec = spec
         self.body = body
 
         Callable.__init__(self, name)
 
     def __str__(self):
         return Callable.build_string('macro', self.value, self.spec)
-
-    def __call__(self, evaluate, env, *arg_sexps):
-        '''
-        Expand the macro's body in some environment using the given argument
-        expressions.
-        '''
-
-        # map symbols to their replacement expressions in a new environment
-        expand_env = Environment(env)
-        expand_env.update(self.spec.fill(arg_sexps, Cons.build_list))
-
-        # evaluate our body in the created environment
-        return evaluate(self.body, expand_env)
 
 class Environment(dict):
     '''

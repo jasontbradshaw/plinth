@@ -1,5 +1,6 @@
 import collections
 
+import errors
 import lang
 import tokens
 
@@ -79,14 +80,20 @@ class ArgSpec:
         return arg_dict
 
     @staticmethod
-    def build(evaluate, env, args):
+    def parse(args):
         '''
         Parses the given args according to the language specification and
-        returns an ArgSpec object for them. Raises an error if parsing fails.
+        returns a dict of all argument types mapped to argument symbols. If
+        there are any optional arguments, they're returned as tuples of (symbol,
+        expression).
         '''
 
         # the ArgSpec we'll return after filling it
-        spec = ArgSpec()
+        result = {
+            ArgSpec.REQUIRED: [],
+            ArgSpec.OPTIONAL: [],
+            ArgSpec.VARIADIC: None
+        }
 
         # convert to a list for easy access/modification
         args = list(args)
@@ -97,35 +104,61 @@ class ArgSpec:
             vararg_symbol = args[-2]
             if isinstance(v, lang.Symbol) and v.value == tokens.VARIADIC_ARG:
                 # store the vararg symbol, then remove its cruft from the list
-                spec.variadic(vararg_symbol)
+                result[ArgSpec.VARIADIC] = vararg_symbol
                 del args[-2:]
 
         # consume optional args next
-        while len(args) > 0 and lang.Cons.is_list(args[-1]):
+        while len(args) > 0 and hasattr(args[-1], '__len__'):
             # get the next argument in the list
             opt_arg = args.pop()
 
             # make sure we got a symbol and an expression for the optional arg
-            if len(opt_arg) != 2 or not isinstance(opt_arg.car, lang.Symbol):
+            if len(opt_arg) != 2 or not isinstance(opt_arg[0], lang.Symbol):
                 raise errors.WrongArgumentTypeError('optional arguments must ' +
                         'consist of a single symbol and a single expression')
 
             # evaluate the expression and store the result in the spec
-            symbol = opt_arg.car
-            expression = opt_arg.cdr.car
-            spec.optional(symbol, evaluate(expression, env))
+            symbol = opt_arg[0]
+            expression = opt_arg[1]
+            result[ArgSpec.OPTIONAL].append((symbol, expression))
 
         # consume remaining required args
         for symbol in args:
             # optional args are no longer allowed
-            if lang.Cons.is_list(symbol):
+            if hasattr(symbol, '__len__'):
                 raise errors.WrongArgumentTypeError('optional arguments must ' +
                         'come after required arguments and before any ' +
-                        'variadic argument.')
+                        'variadic argument')
             # deal with arguments that aren't symbols
             elif not isinstance(symbol, lang.Symbol):
                 raise errors.WrongArgumentTypeError.build(symbol, lang.Symbol)
 
+            result[ArgSpec.REQUIRED].append(symbol)
+
+        return result
+
+    @staticmethod
+    def build(parsed_args, optional_arg_values={}):
+        '''
+        Parses the given args according to the language specification and
+        returns an ArgSpec object for them. Raises an error if parsing fails.
+        '''
+
+        # the ArgSpec we'll return after filling it
+        spec = ArgSpec()
+
+        # variadic
+        if parsed_args[ArgSpec.VARIADIC] is not None:
+            spec.variadic(vararg_symbol)
+
+        # optional
+        for symbol, _ in parsed_args[ArgSpec.OPTIONAL]:
+            # get the evaluated value of the optional arg and add the arg
+            expression = optional_arg_values[symbol]
+            spec.optional(symbol, expression)
+
+        # required
+        for symbol in parsed_args[ArgSpec.REQUIRED]:
             spec.required(symbol)
 
         return spec

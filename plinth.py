@@ -622,54 +622,60 @@ if __name__ == '__main__':
     # the default global environment
     env = lang.Environment(None)
 
-    def bind_prim(token, function):
+    def bind(token, function, evaluator_class=None):
         '''Binds a primitive function to a token in the global environment.'''
         s = lang.Symbol(token)
-        f = lang.PrimitiveFunction(function)
+
+        if evaluator_class is not None:
+            f = lang.PrimitiveFunction(env, function, evaluator_class)
+        else:
+            f = lang.PrimitiveFunction(env, function)
+
         env[s] = f
 
     # bind functions that need special treatment during evaluation
-    env[lang.Symbol(tokens.QUOTE_LONG)] = primitives.quote
-    env[lang.Symbol(tokens.QUASIQUOTE_LONG)] = primitives.quasiquote
-    env[lang.Symbol(tokens.LAMBDA)] = primitives.lambda_
-    env[lang.Symbol(tokens.MACRO)] = primitives.macro
-    env[lang.Symbol(tokens.MACRO_EXPAND)] = primitives.expand
-    env[lang.Symbol(tokens.DEFINE)] = primitives.define
-    env[lang.Symbol(tokens.COND)] = primitives.cond
-    env[lang.Symbol(tokens.AND)] = primitives.and_
-    env[lang.Symbol(tokens.OR)] = primitives.or_
-    env[lang.Symbol(tokens.EVAL)] = primitives.eval_
-    env[lang.Symbol(tokens.LOAD)] = primitives.load
+    bind(tokens.QUOTE_LONG, lambda e: None, lang.QuoteEvaluator)
+    bind(tokens.UNQUOTE_LONG, lambda e: None, lang.UnquoteEvaluator)
+    bind(tokens.QUASIQUOTE_LONG, lambda e: None, lang.QuasiquoteEvaluator)
+    bind(tokens.LAMBDA, lambda args, body: None, lang.LambdaEvaluator)
+    bind(tokens.MACRO, lambda args, body: None, lang.MacroEvaluator)
+    bind(tokens.MACRO_EXPAND, lambda macro, *args: None, lang.ExpandEvaluator)
+    bind(tokens.DEFINE, lambda symbol, value: None, lang.DefineEvaluator)
+    bind(tokens.COND, lambda *e: None, lang.CondEvaluator)
+    bind(tokens.AND, lambda a, b, *rest: None, lang.AndEvaluator)
+    bind(tokens.OR, lambda a, b, *rest: None, lang.OrEvaluator)
+    bind(tokens.EVAL, lambda sexp: None, lang.EvalEvaluator)
+    bind(tokens.LOAD, lambda fname: None, lang.LoadEvaluator)
 
     # repl
-    bind_prim(tokens.READ, primitives.read)
-    bind_prim(tokens.PARSE, primitives.parse_)
+    bind(tokens.READ, primitives.read)
+    bind(tokens.PARSE, primitives.parse_)
 
     # logical
-    bind_prim(tokens.NOT, primitives.not_)
+    bind(tokens.NOT, primitives.not_)
 
     # math
-    bind_prim(tokens.ADD, primitives.add)
-    bind_prim(tokens.SUBTRACT, primitives.sub)
-    bind_prim(tokens.MULTIPLY, primitives.mul)
-    bind_prim(tokens.DIVIDE, primitives.div)
-    bind_prim(tokens.MODULUS, primitives.mod)
-    bind_prim(tokens.POWER, primitives.power)
+    bind(tokens.ADD, primitives.add)
+    bind(tokens.SUBTRACT, primitives.sub)
+    bind(tokens.MULTIPLY, primitives.mul)
+    bind(tokens.DIVIDE, primitives.div)
+    bind(tokens.MODULUS, primitives.mod)
+    bind(tokens.POWER, primitives.power)
 
     # comparison
-    bind_prim(tokens.IS, primitives.is_)
-    bind_prim(tokens.EQUAL, primitives.equal)
-    bind_prim(tokens.GREATER_THAN, primitives.gt)
+    bind(tokens.IS, primitives.is_)
+    bind(tokens.EQUAL, primitives.equal)
+    bind(tokens.GREATER_THAN, primitives.gt)
 
     # cons
-    bind_prim(tokens.CONS, primitives.cons)
-    bind_prim(tokens.CAR, primitives.car)
-    bind_prim(tokens.CDR, primitives.cdr)
-    bind_prim(tokens.LISTP, lang.Cons.is_list)
+    bind(tokens.CONS, primitives.cons)
+    bind(tokens.CAR, primitives.car)
+    bind(tokens.CDR, primitives.cdr)
+    bind(tokens.LISTP, lang.Cons.is_list)
 
     # meta
-    bind_prim(tokens.GENERATE_SYMBOL, primitives.gensym)
-    bind_prim(tokens.TYPE, primitives.type_)
+    bind(tokens.GENERATE_SYMBOL, primitives.gensym)
+    bind(tokens.TYPE, primitives.type_)
 
     # run an interpreter until the user quits
     PlinthInterpreter(env).repl()

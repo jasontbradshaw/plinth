@@ -181,21 +181,3 @@ def gensym(prefix='SYM__'):
     util.ensure_type(basestring, prefix)
     return lang.Symbol(prefix + tokens.OPEN_PAREN + str(GENSYM_COUNTER()) +
             tokens.CLOSE_PAREN)
-
-# these functions serve as markers for whether the function being called is
-# special. we check to see if the function for the symbol is one of these
-# functions, and if so we evaluate it in whatever way it requires. this allows
-# the user to define new symbols that point to these functions, but still have
-# the functions work in the same way.
-quote = lang.PrimitiveFunction(lambda e: _)
-unquote = lang.PrimitiveFunction(lambda e: _)
-quasiquote = lang.PrimitiveFunction(lambda e: _)
-lambda_ = lang.PrimitiveFunction(lambda args, body: _)
-macro = lang.PrimitiveFunction(lambda args, body: _)
-expand = lang.PrimitiveFunction(lambda macro, *args: _)
-define = lang.PrimitiveFunction(lambda symbol, value: _)
-cond = lang.PrimitiveFunction(lambda *e: _)
-and_ = lang.PrimitiveFunction(lambda a, b, *rest: _)
-or_ = lang.PrimitiveFunction(lambda a, b, *rest: _)
-eval_ = lang.PrimitiveFunction(lambda sexp: _)
-load = lang.PrimitiveFunction(lambda fname: _)

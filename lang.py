@@ -519,7 +519,7 @@ class PrimitiveFunction(Function):
     of the constructs that enables the language to function.
     '''
 
-    def __init__(self, method, evaluator_class=PythonMethodEvaluator):
+    def __init__(self, parent, method, evaluator_class=PythonMethodEvaluator):
         '''
         Create a primitive function that works much like a normal function,
         except that the body is a Python method, and the default evaluator
@@ -529,9 +529,11 @@ class PrimitiveFunction(Function):
 
         Callable.__init__(self, evaluator_class)
 
+        self.parent = parent
+        self.spec = argspec.ArgSpec()
+
         # body is a Python method
         self.body = method
-        self.spec = argspec.ArgSpec()
 
         # parse the arg spec (no support for keyword args)
         args, vararg, _, defaults = inspect.getargspec(method)

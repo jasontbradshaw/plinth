@@ -429,9 +429,18 @@ class CondEvaluator(Evaluator):
         yield Evaluator.build_return(NIL)
 
 class AndEvaluator(Evaluator):
-    '''Evaluate Boolean 'and'.'''
+    '''
+    Evaluate Boolean 'and'. Returns False if any of the items evaluates to False,
+    otherwise short-circuits and returns the final item.
+    '''
     def evaluate(self, parent, spec, body, args):
-        raise NotImplementedError()
+        last_item = None
+        for item in args:
+            last_item = yield Evaluator.build_evaluate(item)
+            if last_item is False:
+                break
+
+        yield Evaluator.build_return(last_item)
 
 class OrEvaluator(Evaluator):
     '''Evaluate Boolean 'or'.'''

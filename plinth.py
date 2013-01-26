@@ -386,39 +386,53 @@ class Frame:
         self.env = env
         self.parent = parent
 
-        # where results of child frame evaluations are collected
-        self.done_parsing_results = False
-        self.results = []
+        # where the function's evaluator is stored
+        self.evaluator = None
 
         # for storing execution state
         self.target = None
-        self.args = None
+        self.results = []
 
-    def add_result(self, result):
-        self.results.append(result)
+    def add_result(self, item):
+        self.results.append(item)
 
-    def has_results(self):
-        return self.done_parsing_results
+    def evaluate(self):
+        '''
+        Evaluates the target if possible, acting as an Evaluator until it gets
+        one, then uses the target's evaluator to finish evaluating.
+        '''
 
-    def results_parsed(self):
-        '''Mark that results have been delegated to child frames.'''
-        self.done_parsing_results = True
+        # get our evaluator if its not present
+        if self.evaluator is None:
+            # we can't evaluate functions that have nothing in them
+            if len(self.sexp) == 0:
+                raise errors.ApplicationError('nothing to apply')
 
-    def has_target(self):
-        return self.target is not None
+            try:
+                # target is the first item in the list (IndexError if not there)
+                self.target = self.results.pop()
+                assert len(self.results) == 0
 
-    def update_target_and_args(self):
-        '''Attempt to make the first result the target for the Frame.'''
-        try:
-            # target is the first item in a list
-            self.target = self.results.pop(0)
+                # make sure our first item evaluated to a callable
+                if not isinstance(frame.target, lang.Callable):
+                    raise errors.ApplicationError('wrong type to apply: ' +
+                            unicode(frame.target))
 
-            # set the arguments (rest of the list) once we have a target
-            self.args = self.sexp[1:]
-        except IndexError:
-            raise ValueError('no target evaluated yet')
+                # get the target's evaluator using our S-expression's args
+                self.evaluator = self.target(self.sexp[1:])
 
-def new_evaluate(sexp, env):
+            except IndexError:
+                # evaluate the first item to try and get a callable
+                return lang.Evaluator.build_evaluate(self.sexp[0])
+
+        # since we already have the evaluator, return its next result
+        if len(self.results) > 0:
+            # feed the evaluator the result of our last evaluation, if present
+            assert len(self.result) == 1
+            return self.evaluator.send(self.results.pop())
+        return self.evaluator.next()
+
+def new_evaluate(original_sexp, original_env):
     '''
     Given an Atom or list, evaluates it using the given environment
     (global by default) and returns the result as represented in our language
@@ -426,12 +440,7 @@ def new_evaluate(sexp, env):
     '''
 
     result_frame = Frame(None, None, None)
-    stack = [Frame(sexp, env, result_frame)]
-
-    # does a stack-based return from a frame
-    def ret(frame, result):
-        frame.parent.add_result(result)
-        stack.pop()
+    stack = [Frame(original_sexp, original_env, result_frame)]
 
     # evaluate until the stack is empty
     while len(stack) > 0:
@@ -440,224 +449,29 @@ def new_evaluate(sexp, env):
 
         # symbols are looked up in their containing environment
         if isinstance(frame.sexp, lang.Symbol):
-            ret(frame, frame.env[frame.sexp])
+            frame.parent.add_result(result)
+            stack.pop()
 
         # non-lists (i.e. atoms) evaluate to themselves
         elif not lang.Cons.is_list(frame.sexp):
-            ret(frame, frame.sexp)
+            frame.parent.add_result(result)
+            stack.pop()
 
         # lists are treated as function/macro calls
         else:
-            # get the target callable, evaluating it first if necessary
-            if not frame.has_target():
-                # we can't evaluate functions that have nothing in them
-                if len(frame.sexp) == 0:
-                    raise errors.ApplicationError('nothing to apply')
+            # get the next S-expression from the frame's ongoing evaluation
+            action, sexp, env = frame.evaluate()
 
-                try:
-                    frame.update_target_and_args()
-
-                    # make sure our first item evaluated to a callable
-                    if not isinstance(frame.target, lang.Callable):
-                        raise errors.ApplicationError('wrong type to apply: ' +
-                                unicode(frame.target))
-                except ValueError:
-                    # evaluate the function call
-                    stack.append(Frame(frame.sexp[0], frame.env, frame))
-                    continue
-
-            target = frame.target
-            args = frame.args
-
-            # quote
-            if target is primitives.quote:
-                # return the only argument unevaluated
-                util.ensure_args(args, num_required=1)
-                ret(frame, args[0])
-
-            # quasiquote
-            elif target is primitives.quasiquote:
-                util.ensure_args(args, num_required=1)
-                raise NotImplementedError()
-
-            # function/macro (both are built the same)
-            elif target is primitives.lambda_ or target is primitives.macro:
-                util.ensure_args(args, num_required=2)
-
-                arg_symbols = args[0]
-                body = args[1]
-
-                parsed_args = argspec.ArgSpec.parse(arg_symbols)
-
-                # evaluate any optional arguments if we haven't done so yet
-                optional_args = parsed_args[argspec.ArgSpec.OPTIONAL]
-                if len(optional_args) > 0 and not frame.has_results():
-                    for arg, arg_sexp in reversed(optional_args):
-                        stack.append(Frame(arg_sexp, frame.env, frame))
-                    frame.results_parsed()
-                    continue
-
-                # build the ArgSpec for the new function with optional args
-                optional_arg_values = {}
-                for (symbol, _), value in zip(optional_args, frame.results):
-                    optional_arg_values[symbol] = value
-
-                spec = argspec.ArgSpec.build(parsed_args, optional_arg_values)
-
-                # return a callable with the current environment as the parent
-                result = None
-                if target is primitives.lambda_:
-                    result = lang.Function(frame.env, spec, body)
-                else:
-                    result = lang.Macro(spec, body)
-                ret(frame, result)
-
-            # macro expand
-            elif target is primitives.expand:
-                util.ensure_args(args, num_required=1, is_variadic=True)
-                raise NotImplementedError()
-
-                # evaluate to get the macro and its arguments
-                m = evaluate(args.car, env)
-                arg_expressions = [evaluate(arg, env) for arg in args.cdr]
-
-                # make sure we got a macro
-                util.ensure_type(lang.Macro, m)
-
-                return m(evaluate, env, *arg_expressions)
-
-            # define
-            elif target is primitives.define:
-                util.ensure_args(args, num_required=2)
-
-                symbol = args[0]
-                value = args[1]
-
-                util.ensure_type(lang.Symbol, symbol)
-
-                # evalute the definition value
-                if not frame.has_results():
-                    stack.append(Frame(value, frame.env, frame))
-                    frame.results_parsed()
-                    continue
-
-                result = frame.results[0]
-                frame.env[symbol] = result
-
-                # set the function or macro name if possible
-                if isinstance(result, lang.Callable):
-                    result.name(symbol.value)
-
-                ret(frame, result)
-
-            # cond
-            elif target is primitives.cond:
-                raise NotImplementedError()
-                for tup in args:
-                    # if e is not a list, len() raises an error for us
-                    if len(tup) != 2:
-                        # make sure each is a list of exactly two expressions
-                        s = 'expected 2 expressions, got ' + str(len(tup))
-                        raise errors.IncorrectArgumentCountError(s)
-
-                    # first and second list items are condition and result
-                    condition = tup.car
-                    result = tup.cdr.car
-
-                    # evaluate and return the result if condition is true
-                    if evaluate(condition, env):
-                        return evaluate(result, env)
-
-                # if no result is returned, result is undefined
-                raise errors.ApplicationError('at least one condition must ' +
-                        'evaluate to ' + tokens.TRUE)
-
-            # logical and
-            elif target is primitives.and_:
-                util.ensure_args(args, num_required=2, is_variadic=True)
-                raise NotImplementedError()
-
-                # evaluate the arguments, returning the final one if none were #f,
-                # otherwise the last evaluated item, #f.
-                last_item = None
-                for item in args:
-                    last_item = evaluate(item, env)
-                    if last_item is False:
-                        break
-
-                return last_item
-
-            # logical or
-            elif target is primitives.or_:
-                util.ensure_args(args, num_required=2, is_variadic=True)
-                raise NotImplementedError()
-
-                # evaluate the arguments, returning the first one that's not #f
-                last_item = None
-                for item in args:
-                    last_item = evaluate(item, env)
-                    if not last_item is False:
-                        break
-
-                return last_item
-
-            # eval
-            elif target is primitives.eval_:
-                util.ensure_args(args, num_required=1)
-                raise NotImplementedError()
-
-                # evaluate the given s-expression and return it
-                return evaluate(evaluate(args.car, env), env)
-
-            # load
-            elif target is primitives.load:
-                util.ensure_args(args, num_required=1)
-                util.ensure_type(basestring, args[0])
-                raise NotImplementedError()
-
-                # evaluate every expression in the file in sequence, top to bottom
-                with open(os.path.abspath(args.car), 'r') as f:
-                    for result in parse(tokens.tokenize(util.file_char_iter(f))):
-                        evaluate(result, env)
-
-                # return that we were successful
-                return True
-
-            # evaluate macros
-            elif isinstance(target, lang.Macro):
-                # evaluate the expanded form of the macro in the current environment
-                raise NotImplementedError()
-                return evaluate(target(evaluate, env, *args), env)
-
-            else:
-                # evaluate args, then call the function with them
-                if not frame.has_results():
-                    for arg in reversed(args):
-                        stack.append(Frame(arg, frame.env, frame))
-                    frame.results_parsed()
-                    continue
-
-                # remove the function call from the stack
+            # add frames to the stack and evaluate them until the evaluator
+            # tells us to return a result.
+            if action is lang.Evaluator.EVALUATE:
+                # use the new environment if specified, else the frame's
+                stack.append(Frame(sexp, env or frame.env, frame))
+            elif action is lang.Evaluator.RETURN:
+                frame.parent.add_result(sexp)
                 stack.pop()
-
-                # if we have a primitive function, call it directly and give the
-                # parent its result.
-                if isinstance(target, lang.PrimitiveFunction):
-                    frame.parent.add_result(target(*frame.results))
-                else:
-                    # otherwise, replace the call frame with a new frame that
-                    # evaluates the result of calling the target's body in the
-                    # new environment.
-                    filled_args = target.spec.fill(frame.results,
-                            lang.Cons.build_list)
-
-                    # build the function's environment
-                    env = lang.Environment(frame.env)
-                    env.update(filled_args)
-
-                    target.spec.validate(filled_args.values())
-
-                    stack.append(Frame(target.body, env, frame.parent))
+            else:
+                raise ValueError('Unknown Evaluator action: ' + unicode(action))
 
     # return what should be the only result
     assert len(result_frame.results) == 1

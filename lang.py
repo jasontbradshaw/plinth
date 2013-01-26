@@ -1,3 +1,4 @@
+import collections
 import inspect
 import itertools
 
@@ -11,6 +12,24 @@ class Atom:
 
     def __init__(self, value):
         self.value = value
+        self.metadata = collections.OrderedDict()
+
+    def __setitem__(self, meta_attr, value):
+        '''
+        Set a metadata attribute, but only allow setting it once. Metadata keys
+        and values may only be strings.
+        '''
+        util.ensure_type(basestring, meta_attr, value)
+        if meta_attr not in self.metadata:
+            self.metadata[meta_attr] = value
+
+    def __getitem__(self, meta_attr):
+        '''Get a metadata attribute string.'''
+        return self.metadata[meta_attr]
+
+    def __contains__(self, meta_attr):
+        '''See if the given attribute is in our metadata.'''
+        return meta_attr in self.metadata
 
     def __str__(self):
         return unicode(self.value)
@@ -155,7 +174,7 @@ class Cons:
         if isinstance(index, slice):
             if index.stop < len(self):
                 raise IndexError(self.__class__.__name__.lower() +
-                        ' does not support end indexes')
+                        ' does not support slice end indexes')
             s = self
             for i in xrange(index.start):
                 if s is NIL:
@@ -178,163 +197,11 @@ class Symbol(Atom):
 
     def __init__(self, value):
         '''Symbols are stored and looked up by their string names.'''
-
         Atom.__init__(self, unicode(value))
 
     def __hash__(self):
+        '''Important since we use Symbols as keys in Environments.'''
         return hash(self.value)
-
-    def __eq__(self, other):
-        return isinstance(other, Symbol) and self.value == other.value
-
-class Callable(Atom):
-    '''A base class for object in our language that can be 'called'.'''
-
-    def __init__(self, name=None):
-        '''A name can later be set for display purposes.'''
-        Atom.__init__(self, name)
-
-    @staticmethod
-    def build_string(kind, name, spec):
-        '''
-        Build a string to display a typical callable in the interpreter. kind is
-        the object type to use, name is the (optional) name to give this
-        specific instance of the object, and spec is the ArgSpec object to
-        use to build the arguments list.
-        '''
-
-        s = u'<' + unicode(kind)
-
-        # set the function name if possible
-        if name is not None:
-            s += ' ' + unicode(name)
-
-        s += ' ('
-
-        # compose a list of all arg symbols
-        a = []
-        for arg_type, arg in spec:
-            if arg_type == argspec.ArgSpec.REQUIRED:
-                a.append(unicode(arg))
-            elif arg_type == argspec.ArgSpec.OPTIONAL:
-                arg, default = arg
-                a.append('(' + unicode(arg) + ' ' + util.to_string(default) + ')')
-            elif arg_type == argspec.ArgSpec.VARIADIC:
-                a.append(unicode(arg))
-                a.append(tokens.VARIADIC_ARG)
-            else:
-                raise ValueError('Unhandled arg type: ' + arg_type)
-
-        s += ' '.join(a)
-        s += ')>'
-
-        return s
-
-    def name(self, name):
-        # set the name if it hasn't been stored yet
-        if self.value is None:
-            self.value = name
-
-    def __eq__(self, other):
-        '''Callables are only equal if the other callable is this callable.'''
-        return isinstance(other, self.__class__) and other is self
-
-class Function(Callable):
-    '''
-    Represents a function in our language. Functions take some number of
-    arguments, have a body, and are evaluated in some context.
-    '''
-
-    def __init__(self, parent, spec, body, name=None):
-        '''
-        Creates a function given a list of its arguments, its body, and
-        its parent environment, i.e. the environment it was created and will be
-        evaluated in (its closure). If the last argument is the variadic
-        argument symbol, the preceding symbol is treated as a variadic arg.
-        Optional arguments follow required arguments but precede any variadic
-        arg, and consist of a two item list of symbol and expression, of which
-        the expression is evaluated immediately.
-        '''
-
-        assert isinstance(parent, Environment)
-
-        self.spec = spec
-        self.body = body
-        self.parent = parent
-
-        Callable.__init__(self, name)
-
-    def __str__(self):
-        return Callable.build_string('function', self.value, self.spec)
-
-class PrimitiveFunction(Function):
-    '''
-    Represents a base-level function that can't be broken down into an AST. One
-    of the constructs that enables the language to function.
-    '''
-
-    def __init__(self, method, name=None):
-        '''
-        Create a primitive function that works much like a normal function,
-        except that the method is a Python function that does work using the
-        arguments given to __call__.
-        '''
-
-        self.method = method
-
-        # parse the arg spec (no support for keyword args)
-        args, vararg, _, defaults = inspect.getargspec(method)
-        defaults = () if defaults is None else defaults
-
-        self.spec = argspec.ArgSpec()
-
-        # get the counts for our respective arg types
-        num_required = len(args) - len(defaults)
-        num_optional = len(args) - num_required
-
-        # add required arguments
-        for arg in args[:num_required]:
-            self.spec.required(arg)
-
-        # add optional arguments, which come after required ones
-        for arg, default in itertools.izip(args[num_required:], defaults):
-            self.spec.optional(arg, default)
-
-        # add the variadic arg if it exists
-        if vararg is not None:
-            self.spec.variadic(vararg)
-
-        Callable.__init__(self, name)
-
-    def __str__(self):
-        return Callable.build_string('primitive-function', self.value,
-                self.spec)
-
-    def __call__(self, *arg_values):
-        '''
-        Calls our internal method on the given arguments, ensuring that the
-        correct number of values was passed in.
-        '''
-
-        self.spec.validate(arg_values)
-        return self.method(*arg_values)
-
-class Macro(Callable):
-    '''
-    A code-rewriting construct. A macro takes code and returns (expands) code
-    dynamically at runtime. Arguments aren't evaluated before being inserted
-    into the macro body.
-    '''
-
-    def __init__(self, spec, body, name=None):
-
-        self.spec = spec
-        self.body = body
-
-        Callable.__init__(self, name)
-
-    def __str__(self):
-        return Callable.build_string('macro', self.value, self.spec)
 
 class Environment(dict):
     '''
@@ -371,3 +238,288 @@ class Environment(dict):
 
         raise errors.SymbolNotFoundError.build(symbol)
 
+class Evaluator:
+    '''
+    A class that controls the evaluation of a Callable. When called with the
+    parent environment, argspec, body, and arguments of some target function,
+    returns a generator that yields (and accepts) results until a return value
+    is obtained.
+    '''
+
+    # actions to be taken for yielded items
+    EVALUATE = 'evaluate'
+    RETURN = 'return'
+
+    @classmethod
+    def build_evaluate(sexp, env=None):
+        '''If None, env defaults to the parent frame's calling environment.'''
+        return (Evaluator.EVALUATE, sexp, env)
+
+    @classmethod
+    def build_return(sexp):
+        return (Evaluator.RETURN, sexp, None)
+
+    def __call__(self, parent, spec, body, args):
+        '''
+        Return the generator result of the user-defined evaluate method after
+        validating the arguments.
+        '''
+        spec.validate(args)
+        return self.evaluate(parent, spec, body, args)
+
+    def evaluate(self, parent, spec, body, args):
+        '''
+        Takes a parent environment, an argspec, a body, and arguments, then
+        yields actions that need to be taken before a result can be obtained.
+        The EVALUATE action specifies that the yielded result should be
+        evaluated, possibly in some environment, then returned to the generator.
+        The RETURN action specifies that the result is final and needs no more
+        evaluation. Arguments have already been validated by the time this
+        method receives them.
+        '''
+        raise NotImplementedError('Evaluators must implement evaluate as a ' +
+                'generator.')
+
+class UserFunctionEvaluator(Evaluator):
+    '''Handles user-defined function evaluation.'''
+
+    def evaluate(self, parent, spec, body, args):
+        # evaluate all arguments left-to-right
+        evaluated_args = []
+        for arg in args:
+            evaluated_arg = yield Evaluator.build_evaluate(arg)
+            evaluated_args.append(evaluated_arg)
+
+        # create a new environment filled with the evaluated arguments
+        env = Environment(parent)
+        env.update(spec.fill(evaluated_args))
+
+        # get the result, then return it
+        result = yield Evaluator.build_evaluate(body, env)
+        yield Evaluator.build_return(result)
+
+class UserMacroEvaluator(Evaluator):
+    '''Handles user-defined macro evaluation.'''
+
+    def evaluate(self, parent, spec, body, args):
+        # create a new environment filled with the unevaluated arguments
+        env = Environment(parent)
+        env.update(spec.fill(args))
+
+        # evaluate the body to get the interpolated macro body
+        macro_body = yield Evaluator.build_evaluate(body, env)
+
+        # evaluate the macro body in the original parent to get the full result
+        result = yield Evaluator.build_evaluate(macro_body, parent)
+        yield Evaluator.build_return(result)
+
+class PythonMethodEvaluator(Evaluator):
+    '''Evaluates Python methods as if they were native functions.'''
+
+    def evaluate(self, parent, spec, body, args):
+        # evaluate all arguments left-to-right
+        evaluated_args = []
+        for arg in args:
+            evaluated_arg = yield Evaluator.build_evaluate(arg)
+            evaluated_args.append(evaluated_arg)
+
+        # return the result of calling the method on the evaluated arguments
+        yield Evaluator.build_return(self.body(*evaluated_args))
+
+class QuoteEvaluator(Evaluator):
+    '''Return the only argument unevaluated.'''
+    def evaluate(self, parent, spec, body, args):
+        yield Evaluator.build_return(args[0])
+
+class UnquoteEvaluator(Evaluator):
+    '''Handle un-quoting select S-expressions.'''
+    def evaluate(self, parent, spec, body, args):
+        raise NotImplementedError()
+
+class QuasiquoteEvaluator(Evaluator):
+    '''Handle quasiquoting an S-expression.'''
+    def evaluate(self, parent, spec, body, args):
+        raise NotImplementedError()
+
+class LambdaEvaluator(Evaluator):
+    '''Build a new user-defined function.'''
+    def evaluate(self, parent, spec, body, args):
+        raise NotImplementedError()
+
+class MacroEvaluator(Evaluator):
+    '''Build a new user-defined macro.'''
+    def evaluate(self, parent, spec, body, args):
+        raise NotImplementedError()
+
+class ExpandEvaluator(Evaluator):
+    '''Expand a user-defined macro and return its S-expression.'''
+    def evaluate(self, parent, spec, body, args):
+        raise NotImplementedError()
+
+class DefineEvaluator(Evaluator):
+    '''Define a symbol in the parent environment.'''
+    def evaluate(self, parent, spec, body, args):
+        raise NotImplementedError()
+
+class CondEvaluator(Evaluator):
+    '''Evaluate a conditional.'''
+    def evaluate(self, parent, spec, body, args):
+        raise NotImplementedError()
+
+class AndEvaluator(Evaluator):
+    '''Evaluate Boolean 'and'.'''
+    def evaluate(self, parent, spec, body, args):
+        raise NotImplementedError()
+
+class OrEvaluator(Evaluator):
+    '''Evaluate Boolean 'or'.'''
+    def evaluate(self, parent, spec, body, args):
+        raise NotImplementedError()
+
+class EvalEvaluator(Evaluator):
+    '''Evaluate an S-expression and return the result.'''
+    def evaluate(self, parent, spec, body, args):
+        raise NotImplementedError()
+
+class LoadEvaluator(Evaluator):
+    '''
+    Interpret a file as a list of S-expressions and evaluate them into the
+    current environment.
+    '''
+    def evaluate(self, parent, spec, body, args):
+        raise NotImplementedError()
+
+class Callable(Atom):
+    '''A base class for object in our language that can be 'called'.'''
+
+    def __init__(self, evaluator_class):
+        Atom.__init__(self, None)
+
+        # make sure these are present for get_evaluator()
+        self.parent = None
+        self.body = None
+        self.spec = None
+
+        # build our evaluator
+        self.evaluator = evaluator_class()
+
+    def __call__(self, args):
+        '''Return an evaluator generator specific to this object instance.'''
+        return self.evaluator(self.parent, self.spec, self.body, args)
+
+    def __eq__(self, other):
+        '''Callables are only equal if the other callable is this callable.'''
+        return other is self
+
+    @staticmethod
+    def build_string(kind, spec, name=None):
+        '''
+        Build a string to display a typical callable in the interpreter. kind is
+        the object type to use, and spec is the ArgSpec object to use to build
+        the arguments list.
+        '''
+
+        s = u'<' + unicode(kind)
+
+        # set the function name if possible
+        if name is not None:
+            s += ' ' + unicode(name)
+
+        s += ' ('
+
+        # compose a list of all arg symbols
+        a = []
+        for arg_type, arg in spec:
+            if arg_type == argspec.ArgSpec.REQUIRED:
+                a.append(unicode(arg))
+            elif arg_type == argspec.ArgSpec.OPTIONAL:
+                arg, default = arg
+                a.append('(' + unicode(arg) + ' ' + util.to_string(default) + ')')
+            elif arg_type == argspec.ArgSpec.VARIADIC:
+                a.append(unicode(arg))
+                a.append(tokens.VARIADIC_ARG)
+            else:
+                raise ValueError('Unhandled arg type: ' + arg_type)
+
+        s += ' '.join(a)
+        s += ')>'
+
+        return s
+
+class Function(Callable):
+    '''
+    Represents a function in our language. Functions take some number of
+    arguments, have a body, and are evaluated in some context.
+    '''
+
+    def __init__(self, parent, spec, body):
+        Callable.__init__(self, UserFunctionEvaluator)
+
+        self.spec = spec
+        self.body = body
+        self.parent = parent
+
+    def __str__(self):
+        return Callable.build_string('function', self.spec,
+                self['name'] if 'name' in self else None)
+
+class Macro(Callable):
+    '''
+    A code-rewriting construct. A macro takes code and returns (expands) code
+    dynamically at runtime. Arguments aren't evaluated before being inserted
+    into the macro body.
+    '''
+
+    def __init__(self, spec, body):
+        Callable.__init__(self, UserMacroEvaluator)
+
+        self.spec = spec
+        self.body = body
+
+    def __str__(self):
+        return Callable.build_string('macro', self.spec,
+                self['name'] if 'name' in self else None, self.spec)
+
+class PrimitiveFunction(Function):
+    '''
+    Represents a base-level function that can't be broken down into an AST. One
+    of the constructs that enables the language to function.
+    '''
+
+    def __init__(self, method, evaluator_class=PythonMethodEvaluator):
+        '''
+        Create a primitive function that works much like a normal function,
+        except that the body is a Python method, and the default evaluator
+        treats it as such. If a different evaluator_class is specified, its
+        evaluation methodology is used instead (i.e. for quote, define, etc.).
+        '''
+
+        Callable.__init__(self, evaluator_class)
+
+        # body is a Python method
+        self.body = method
+        self.spec = argspec.ArgSpec()
+
+        # parse the arg spec (no support for keyword args)
+        args, vararg, _, defaults = inspect.getargspec(method)
+        defaults = () if defaults is None else defaults
+
+        # get the counts for our respective arg types
+        num_required = len(args) - len(defaults)
+        num_optional = len(args) - num_required
+
+        # add required arguments
+        for arg in args[:num_required]:
+            self.spec.required(arg)
+
+        # add optional arguments, which come after required ones
+        for arg, default in itertools.izip(args[num_required:], defaults):
+            self.spec.optional(arg, default)
+
+        # add the variadic arg if it exists
+        if vararg is not None:
+            self.spec.variadic(vararg)
+
+    def __str__(self):
+        return Callable.build_string('primitive-function', self.spec,
+                self['name'] if 'name' in self else None)

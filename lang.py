@@ -385,7 +385,7 @@ class DefineEvaluator(Evaluator):
     '''Define a symbol in an environment and return the defined value.'''
     def evaluate(self, parent, spec, body, args):
         symbol = args[0]
-        value = args[1]
+        value = yield Evaluator.build_evaluate(args[1])
 
         # define the symbol in the parent environment
         parent[symbol] = value

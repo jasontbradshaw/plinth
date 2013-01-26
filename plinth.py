@@ -73,182 +73,6 @@ def quasiquote_evaluate(sexp, env, level=0):
     # return the semi-evaluated arguments as a list
     return lang.Cons.build(*result)
 
-def evaluate(sexp, env):
-    '''
-    Given an Atom or list, evaluates it using the given environment
-    (global by default) and returns the result as represented in our language
-    constructs.
-    '''
-
-    # symbol
-    if isinstance(sexp, lang.Symbol):
-        # look it up in the environment for its value
-        return env[sexp]
-
-    # atom (not a literal list)
-    elif not lang.Cons.is_list(sexp):
-        # it's a generic atom and evaluates to itself
-        return sexp
-
-    # list
-    else:
-        # we can't evaluate functions that have nothing in them
-        if len(sexp) == 0:
-            raise errors.ApplicationError('nothing to apply')
-
-        # evaluate functions using their arguments
-        function = evaluate(sexp.car, env)
-        args = sexp.cdr
-
-        # make sure our first item evaluated to a function
-        if not isinstance(function, lang.Callable):
-            raise errors.ApplicationError('wrong type to apply: ' +
-                    str(function))
-
-        # quote
-        if function is primitives.quote:
-            # return the argument unevaluated
-            util.ensure_args(args, num_required=1)
-            return args.car
-
-        # quasiquote
-        elif function is primitives.quasiquote:
-            util.ensure_args(args, num_required=1)
-            return quasiquote_evaluate(args.car, env)
-
-        # function
-        elif function is primitives.lambda_:
-            util.ensure_args(args, num_required=2)
-
-            arg_symbols = args.car
-            body = args.cdr.car
-
-            # return a function with the current environment as the parent
-            return lang.Function(evaluate, env, arg_symbols, body)
-
-        # macro
-        elif function is primitives.macro:
-            util.ensure_args(args, num_required=2)
-
-            arg_symbols = args.car
-            body = args.cdr.car
-
-            # return a macro with the given symbols and body
-            return lang.Macro(evaluate, env, arg_symbols, body)
-
-        # macro expand
-        elif function is primitives.expand:
-            util.ensure_args(args, num_required=1, is_variadic=True)
-
-            # evaluate to get the macro and its arguments
-            m = evaluate(args.car, env)
-            arg_expressions = [evaluate(arg, env) for arg in args.cdr]
-
-            # make sure we got a macro
-            util.ensure_type(lang.Macro, m)
-
-            return m(evaluate, env, *arg_expressions)
-
-        # define
-        elif function is primitives.define:
-            util.ensure_args(args, num_required=2)
-
-            symbol = args.car
-            value = args.cdr.car
-
-            # make sure we're defining to a symbol
-            util.ensure_type(lang.Symbol, symbol)
-
-            # evaluate the argument, map the symbol to the result in the current
-            # environment, then return the evaluated value. this allows for
-            # chains of definitions, or simultaneous variable assignments to the
-            # same value.
-            result = evaluate(value, env)
-            env[symbol] = result
-
-            # set the function or macro name if possible
-            if isinstance(result, lang.Callable):
-                result.name(symbol.value)
-
-            return result
-
-        # cond
-        elif function is primitives.cond:
-            for tup in args:
-                # if e is not a list, len() raises an error for us
-                if len(tup) != 2:
-                    # make sure each is a list of exactly two expressions
-                    s = 'expected 2 expressions, got ' + str(len(tup))
-                    raise errors.IncorrectArgumentCountError(s)
-
-                # first and second list items are condition and result
-                condition = tup.car
-                result = tup.cdr.car
-
-                # evaluate and return the result if condition is true
-                if evaluate(condition, env):
-                    return evaluate(result, env)
-
-            # if no result is returned, result is undefined
-            raise errors.ApplicationError('at least one condition must ' +
-                    'evaluate to ' + tokens.TRUE)
-
-        # logical and
-        elif function is primitives.and_:
-            util.ensure_args(args, num_required=2, is_variadic=True)
-
-            # evaluate the arguments, returning the final one if none were #f,
-            # otherwise the last evaluated item, #f.
-            last_item = None
-            for item in args:
-                last_item = evaluate(item, env)
-                if last_item is False:
-                    break
-
-            return last_item
-
-        # logical or
-        elif function is primitives.or_:
-            util.ensure_args(args, num_required=2, is_variadic=True)
-
-            # evaluate the arguments, returning the first one that's not #f,
-            last_item = None
-            for item in args:
-                last_item = evaluate(item, env)
-                if not last_item is False:
-                    break
-
-            return last_item
-
-        # eval
-        elif function is primitives.eval_:
-            util.ensure_args(args, num_required=1)
-
-            # evaluate the given s-expression and return it
-            return evaluate(evaluate(args.car, env), env)
-
-        # load
-        elif function is primitives.load:
-            util.ensure_args(args, num_required=1)
-            util.ensure_type(basestring, args.car)
-
-            # evaluate every expression in the file in sequence, top to bottom
-            with open(os.path.abspath(args.car), 'r') as f:
-                for result in parse(tokens.tokenize(util.file_char_iter(f))):
-                    evaluate(result, env)
-
-            # return that we were successful
-            return true
-
-        # evaluate macros
-        elif isinstance(function, lang.Macro):
-            # evaluate the expanded form of the macro in the current environment
-            return evaluate(function(evaluate, env, *args), env)
-
-        else:
-            # evaluate args and call the function with them
-            return function(evaluate, *[evaluate(arg, env) for arg in args])
-
 class Frame:
     def __init__(self, sexp, env, parent):
         self.sexp = sexp
@@ -301,7 +125,7 @@ class Frame:
             return self.evaluator.send(self.results.pop())
         return self.evaluator.next()
 
-def new_evaluate(original_sexp, original_env):
+def evaluate(original_sexp, original_env):
     '''
     Given an Atom or list, evaluates it using the given environment
     (global by default) and returns the result as represented in our language
@@ -428,7 +252,7 @@ class PlinthInterpreter(interpreter.Interpreter):
 
             # evaluate every entered expression sequentially
             for result in parser.parse(tokens.tokenize(self.source)):
-                self.stdout.write(util.to_string(new_evaluate(result, self.env)) +
+                self.stdout.write(util.to_string(evaluate(result, self.env)) +
                         os.linesep)
 
             # reset the prompt and source

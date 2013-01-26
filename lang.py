@@ -459,7 +459,9 @@ class OrEvaluator(Evaluator):
 class EvalEvaluator(Evaluator):
     '''Evaluate an S-expression and return the result.'''
     def evaluate(self, parent, spec, body, args):
-        raise NotImplementedError()
+        sexp = yield Evaluator.build_evaluate(args[0])
+        result = yield Evaluator.build_evaluate(sexp)
+        yield Evaluator.build_return(result)
 
 class LoadEvaluator(Evaluator):
     '''

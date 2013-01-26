@@ -250,12 +250,12 @@ class Evaluator:
     EVALUATE = 'evaluate'
     RETURN = 'return'
 
-    @classmethod
+    @staticmethod
     def build_evaluate(sexp, env=None):
         '''If None, env defaults to the parent frame's calling environment.'''
         return (Evaluator.EVALUATE, sexp, env)
 
-    @classmethod
+    @staticmethod
     def build_return(sexp):
         return (Evaluator.RETURN, sexp, None)
 
@@ -324,7 +324,7 @@ class PythonMethodEvaluator(Evaluator):
             evaluated_args.append(evaluated_arg)
 
         # return the result of calling the method on the evaluated arguments
-        yield Evaluator.build_return(self.body(*evaluated_args))
+        yield Evaluator.build_return(body(*evaluated_args))
 
 class QuoteEvaluator(Evaluator):
     '''Return the only argument unevaluated.'''
@@ -341,15 +341,40 @@ class QuasiquoteEvaluator(Evaluator):
     def evaluate(self, parent, spec, body, args):
         raise NotImplementedError()
 
-class LambdaEvaluator(Evaluator):
-    '''Build a new user-defined function.'''
-    def evaluate(self, parent, spec, body, args):
-        raise NotImplementedError()
+class CallableEvaluator(Evaluator):
+    '''Build a new user-defined callable.'''
 
-class MacroEvaluator(Evaluator):
-    '''Build a new user-defined macro.'''
+    def __init__(self, callable_class):
+        # the type of Callable object to create
+        self.callable_class = callable_class
+
     def evaluate(self, parent, spec, body, args):
-        raise NotImplementedError()
+        # get the child callable's arguments and body
+        new_args = args[0]
+        new_body = args[1]
+
+        parsed_args = argspec.ArgSpec.parse(new_args)
+
+        # evaluate all the optional argument's defaults
+        optional_arg_values = {}
+        for symbol, sexp in parsed_args[argspec.ArgSpec.OPTIONAL]:
+            value = yield Evaluator.build_evaluate(sexp)
+            optional_arg_values[symbol] = value
+
+        # build a new function and return it
+        new_spec = argspec.ArgSpec.build(parsed_args, optional_arg_values)
+        yield Evaluator.build_return(
+                self.callable_class(parent, new_spec, new_body))
+
+class LambdaEvaluator(CallableEvaluator):
+    '''Build a new user-defined function.'''
+    def __init__(self):
+        CallableEvaluator.__init__(self, Function)
+
+class MacroEvaluator(CallableEvaluator):
+    '''Build a new user-defined macro.'''
+    def __init__(self):
+        CallableEvaluator.__init__(self, Macro)
 
 class ExpandEvaluator(Evaluator):
     '''Expand a user-defined macro and return its S-expression.'''
@@ -357,9 +382,16 @@ class ExpandEvaluator(Evaluator):
         raise NotImplementedError()
 
 class DefineEvaluator(Evaluator):
-    '''Define a symbol in the parent environment.'''
+    '''Define a symbol in an environment and return the defined value.'''
     def evaluate(self, parent, spec, body, args):
-        raise NotImplementedError()
+        symbol = args[0]
+        value = args[1]
+
+        # define the symbol in the parent environment
+        parent[symbol] = value
+
+        # return the value to allow for chained definitions
+        yield Evaluator.build_return(value)
 
 class CondEvaluator(Evaluator):
     '''Evaluate a conditional.'''
@@ -455,9 +487,9 @@ class Function(Callable):
     def __init__(self, parent, spec, body):
         Callable.__init__(self, UserFunctionEvaluator)
 
+        self.parent = parent
         self.spec = spec
         self.body = body
-        self.parent = parent
 
     def __str__(self):
         return Callable.build_string('function', self.spec,
@@ -470,9 +502,10 @@ class Macro(Callable):
     into the macro body.
     '''
 
-    def __init__(self, spec, body):
+    def __init__(self, parent, spec, body):
         Callable.__init__(self, UserMacroEvaluator)
 
+        self.parent = parent
         self.spec = spec
         self.body = body
 

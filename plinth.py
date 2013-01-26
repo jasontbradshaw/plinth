@@ -414,9 +414,9 @@ class Frame:
                 assert len(self.results) == 0
 
                 # make sure our first item evaluated to a callable
-                if not isinstance(frame.target, lang.Callable):
+                if not isinstance(self.target, lang.Callable):
                     raise errors.ApplicationError('wrong type to apply: ' +
-                            unicode(frame.target))
+                            unicode(self.target))
 
                 # get the target's evaluator using our S-expression's args
                 self.evaluator = self.target(self.sexp[1:])
@@ -428,7 +428,7 @@ class Frame:
         # since we already have the evaluator, return its next result
         if len(self.results) > 0:
             # feed the evaluator the result of our last evaluation, if present
-            assert len(self.result) == 1
+            assert len(self.results) == 1
             return self.evaluator.send(self.results.pop())
         return self.evaluator.next()
 
@@ -449,12 +449,12 @@ def new_evaluate(original_sexp, original_env):
 
         # symbols are looked up in their containing environment
         if isinstance(frame.sexp, lang.Symbol):
-            frame.parent.add_result(result)
+            frame.parent.add_result(frame.env[frame.sexp])
             stack.pop()
 
         # non-lists (i.e. atoms) evaluate to themselves
         elif not lang.Cons.is_list(frame.sexp):
-            frame.parent.add_result(result)
+            frame.parent.add_result(frame.sexp)
             stack.pop()
 
         # lists are treated as function/macro calls
@@ -625,7 +625,7 @@ if __name__ == '__main__':
     def bind_prim(token, function):
         '''Binds a primitive function to a token in the global environment.'''
         s = lang.Symbol(token)
-        f = lang.PrimitiveFunction(function, token)
+        f = lang.PrimitiveFunction(function)
         env[s] = f
 
     # bind functions that need special treatment during evaluation

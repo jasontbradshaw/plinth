@@ -443,9 +443,18 @@ class AndEvaluator(Evaluator):
         yield Evaluator.build_return(last_item)
 
 class OrEvaluator(Evaluator):
-    '''Evaluate Boolean 'or'.'''
+    '''
+    Evaluate Boolean 'or'. Returns the first argument that doesn't evaluate
+    to False, otherwise returns False.
+    '''
     def evaluate(self, parent, spec, body, args):
-        raise NotImplementedError()
+        last_item = None
+        for item in args:
+            last_item = yield Evaluator.build_evaluate(item)
+            if last_item is not False:
+                break
+
+        yield Evaluator.build_return(last_item)
 
 class EvalEvaluator(Evaluator):
     '''Evaluate an S-expression and return the result.'''

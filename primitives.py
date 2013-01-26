@@ -2,6 +2,7 @@ import numbers
 
 import errors
 import lang
+import parser
 import tokens
 import util
 
@@ -170,7 +171,7 @@ def read(prompt):
 def parse_(s):
     '''Parse a string into a list of the S-expressions it describes.'''
     util.ensure_type(basestring, s)
-    return lang.Cons.build(*parse(tokens.tokenize(s)))
+    return lang.Cons.build(*parser.parse(tokens.tokenize(s)))
 
 def gensym(prefix='SYM__'):
     '''

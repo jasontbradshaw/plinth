@@ -4,6 +4,7 @@ import itertools
 
 import argspec
 import errors
+import parser
 import tokens
 import util
 
@@ -469,7 +470,16 @@ class LoadEvaluator(Evaluator):
     current environment.
     '''
     def evaluate(self, parent, spec, body, args):
-        raise NotImplementedError()
+        fname = args[0]
+        util.ensure_type(basestring, fname)
+
+        # evaluate every expression in the file in sequence, top to bottom
+        with open(os.path.abspath(fname), 'r') as f:
+            for sexp in parser.parse(tokens.tokenize(util.file_char_iter(f))):
+                yield Evaluator.build_evaluate(sexp)
+
+        # return that we were successful
+        yield Evaluator.build_return(True)
 
 class Callable(Atom):
     '''A base class for object in our language that can be 'called'.'''

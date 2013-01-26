@@ -36,7 +36,7 @@ plinth supports lots of built-in functionality.
    every list, if the first element evaluates to `#t`, then the second element
    is returned. If the first element evaluates to `#f`, then the next list of
    expressions is tried in sequence until one that returns `#t` is found. If no
-   expressions evaluate to `#t`, an error is raised and the result is undefined.
+   expression evaluates to `#t`, `nil` is returned.
 
  * `and`, `or`, and `not` evaluate their arguments using standard logical rules
    and return at the soonest possible moment. This means that, for example, if

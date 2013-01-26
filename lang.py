@@ -385,6 +385,9 @@ class DefineEvaluator(Evaluator):
     '''Define a symbol in an environment and return the defined value.'''
     def evaluate(self, parent, spec, body, args):
         symbol = args[0]
+
+        util.ensure_type(symbol, Symbol)
+
         value = yield Evaluator.build_evaluate(args[1])
 
         # define the symbol in the parent environment
@@ -394,9 +397,36 @@ class DefineEvaluator(Evaluator):
         yield Evaluator.build_return(value)
 
 class CondEvaluator(Evaluator):
-    '''Evaluate a conditional.'''
+    '''
+    Evaluate a conditional expression. The arguments are lists of tuples where
+    the first item is a conditional and the second is the result to evaluate and
+    return if the conditional evaluates to True. If no conditional expression
+    evaluates to True, returns nil.
+    '''
+
     def evaluate(self, parent, spec, body, args):
-        raise NotImplementedError()
+        for tup in args:
+            # if tup is not an iterable, len() raises an error for us
+            if len(tup) != 2:
+                # make sure each is a list of exactly two expressions
+                s = 'expected 2 expressions, got ' + str(len(tup))
+                raise errors.IncorrectArgumentCountError(s)
+
+            # first and second list items are condition and result
+            condition = tup[0]
+            result = tup[1]
+
+            # evaluate and return the result if the condition passes
+            condition_result = yield Evaluator.build_evaluate(condition)
+            if condition_result:
+                result = yield Evaluator.build_evaluate(result)
+                yield Evaluator.build_return(result)
+
+                # make certain not to allow further generator progression
+                raise StopIteration()
+
+        # if no result is returned, return nil
+        yield Evaluator.build_return(NIL)
 
 class AndEvaluator(Evaluator):
     '''Evaluate Boolean 'and'.'''

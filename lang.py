@@ -97,11 +97,6 @@ class Cons:
         return result
 
     @staticmethod
-    def build_list(items):
-        '''Same as build, but takes a single list as its arguments instead.'''
-        return Cons.build(*items)
-
-    @staticmethod
     def is_list(e):
         '''Returns whether an element is a list or not (nil is a list).'''
 

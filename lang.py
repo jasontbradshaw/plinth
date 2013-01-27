@@ -468,9 +468,6 @@ class CondEvaluator(Evaluator):
                 result = yield Evaluator.build_evaluate(result)
                 yield Evaluator.build_return(result)
 
-                # make certain not to allow further generator progression
-                raise StopIteration()
-
         # if no result is returned, return nil
         yield Evaluator.build_return(NIL)
 

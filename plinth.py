@@ -20,9 +20,9 @@ def quasiquote_evaluate(sexp, env, level=0):
     nesting.
     '''
 
-    # NOTE: this is the only place that the 'unquote' and
-    # 'unquote-splicing' tokens are treated as valid. they simply
-    # resolve to undefined symbols everywhere else.
+    # NOTE: this is the only place that the 'unquote' and 'unquote-splicing'
+    # tokens are treated as valid. they simply resolve to undefined symbols
+    # everywhere else.
 
     assert level >= 0
 
@@ -73,8 +73,53 @@ def quasiquote_evaluate(sexp, env, level=0):
     # return the semi-evaluated arguments as a list
     return lang.Cons.build(*result)
 
+def evaluate(original_sexp, original_env):
+    '''
+    Given an Atom or list, evaluates it using the given environment
+    (global by default) and returns the result as represented in our language
+    constructs.
+    '''
+
+    result_frame = Frame(None, None, None)
+    stack = [Frame(original_sexp, original_env, result_frame)]
+
+    # evaluate until the stack is empty
+    while len(stack) > 0:
+        # process the next frame on the stack
+        frame = stack[-1]
+
+        # symbols are looked up in their containing environment
+        if isinstance(frame.sexp, lang.Symbol):
+            frame.parent.add_result(frame.env[frame.sexp])
+            stack.pop()
+
+        # non-lists (i.e. atoms) evaluate to themselves
+        elif not lang.Cons.is_list(frame.sexp):
+            frame.parent.add_result(frame.sexp)
+            stack.pop()
+
+        # lists are treated as function/macro calls
+        else:
+            # get the next S-expression from the frame's ongoing evaluation
+            action, sexp, env, qq_level = frame.evaluate()
+
+            # add frames to the stack and evaluate them until the evaluator
+            # tells us to return a result.
+            if action is lang.Evaluator.EVALUATE:
+                # use the new environment if specified, else the frame's
+                stack.append(Frame(sexp, env or frame.env, frame, qq_level))
+            elif action is lang.Evaluator.RETURN:
+                frame.parent.add_result(sexp)
+                stack.pop()
+            else:
+                raise ValueError('Unknown Evaluator action: ' + unicode(action))
+
+    # return what should be the only result
+    assert len(result_frame.results) == 1
+    return result_frame.results[0]
+
 class Frame:
-    def __init__(self, sexp, env, parent):
+    def __init__(self, sexp, env, parent, qq_level=0):
         self.sexp = sexp
         self.env = env
         self.parent = parent
@@ -124,51 +169,6 @@ class Frame:
             assert len(self.results) == 1
             return self.evaluator.send(self.results.pop())
         return self.evaluator.next()
-
-def evaluate(original_sexp, original_env):
-    '''
-    Given an Atom or list, evaluates it using the given environment
-    (global by default) and returns the result as represented in our language
-    constructs.
-    '''
-
-    result_frame = Frame(None, None, None)
-    stack = [Frame(original_sexp, original_env, result_frame)]
-
-    # evaluate until the stack is empty
-    while len(stack) > 0:
-        # process the next frame on the stack
-        frame = stack[-1]
-
-        # symbols are looked up in their containing environment
-        if isinstance(frame.sexp, lang.Symbol):
-            frame.parent.add_result(frame.env[frame.sexp])
-            stack.pop()
-
-        # non-lists (i.e. atoms) evaluate to themselves
-        elif not lang.Cons.is_list(frame.sexp):
-            frame.parent.add_result(frame.sexp)
-            stack.pop()
-
-        # lists are treated as function/macro calls
-        else:
-            # get the next S-expression from the frame's ongoing evaluation
-            action, sexp, env = frame.evaluate()
-
-            # add frames to the stack and evaluate them until the evaluator
-            # tells us to return a result.
-            if action is lang.Evaluator.EVALUATE:
-                # use the new environment if specified, else the frame's
-                stack.append(Frame(sexp, env or frame.env, frame))
-            elif action is lang.Evaluator.RETURN:
-                frame.parent.add_result(sexp)
-                stack.pop()
-            else:
-                raise ValueError('Unknown Evaluator action: ' + unicode(action))
-
-    # return what should be the only result
-    assert len(result_frame.results) == 1
-    return result_frame.results[0]
 
 class PlinthInterpreter(interpreter.Interpreter):
     '''Implements the standard plinth interpreter.'''

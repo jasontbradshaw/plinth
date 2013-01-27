@@ -247,13 +247,13 @@ class Evaluator:
     RETURN = 'return'
 
     @staticmethod
-    def build_evaluate(sexp, env=None, qq_level=0):
+    def build_evaluate(sexp, env=None):
         '''If None, env defaults to the parent frame's calling environment.'''
-        return (Evaluator.EVALUATE, sexp, env, qq_level)
+        return (Evaluator.EVALUATE, sexp, env)
 
     @staticmethod
     def build_return(sexp):
-        return (Evaluator.RETURN, sexp, None, None)
+        return (Evaluator.RETURN, sexp, None)
 
     def __call__(self, parent, spec, body, args):
         '''
@@ -263,7 +263,7 @@ class Evaluator:
         spec.validate(args)
         return self.evaluate(parent, spec, body, args)
 
-    def evaluate(self, parent, spec, body, args, qq_level=0):
+    def evaluate(self, parent, spec, body, args):
         '''
         Takes a parent environment, an argspec, a body, and arguments, then
         yields actions that need to be taken before a result can be obtained.
@@ -278,7 +278,7 @@ class Evaluator:
 class UserFunctionEvaluator(Evaluator):
     '''Handles user-defined function evaluation.'''
 
-    def evaluate(self, parent, spec, body, args, qq_level=0):
+    def evaluate(self, parent, spec, body, args):
         # evaluate all arguments left-to-right
         evaluated_args = []
         for arg in args:
@@ -296,7 +296,7 @@ class UserFunctionEvaluator(Evaluator):
 class UserMacroEvaluator(Evaluator):
     '''Handles user-defined macro evaluation.'''
 
-    def evaluate(self, parent, spec, body, args, qq_level=0):
+    def evaluate(self, parent, spec, body, args):
         # create a new environment filled with the unevaluated arguments
         env = Environment(parent)
         env.update(spec.fill(args))
@@ -311,7 +311,7 @@ class UserMacroEvaluator(Evaluator):
 class PythonMethodEvaluator(Evaluator):
     '''Evaluates Python methods as if they were native functions.'''
 
-    def evaluate(self, parent, spec, body, args, qq_level=0):
+    def evaluate(self, parent, spec, body, args):
         # evaluate all arguments left-to-right
         evaluated_args = []
         for arg in args:
@@ -323,69 +323,18 @@ class PythonMethodEvaluator(Evaluator):
 
 class QuoteEvaluator(Evaluator):
     '''Return the only argument unevaluated.'''
-    def evaluate(self, parent, spec, body, args, qq_level=0):
+    def evaluate(self, parent, spec, body, args):
         yield Evaluator.build_return(args[0])
 
 class UnquoteEvaluator(Evaluator):
     '''Handle un-quoting select S-expressions.'''
-    def evaluate(self, parent, spec, body, args, qq_level=0):
+    def evaluate(self, parent, spec, body, args):
         raise NotImplementedError()
 
 class QuasiquoteEvaluator(Evaluator):
     '''Handle quasiquoting an S-expression.'''
-    def evaluate(self, parent, spec, body, args, qq_level=0):
-        # NOTE: this is the only place that the 'unquote' and 'unquote-splicing'
-        # tokens are treated as valid. they simply resolve to undefined symbols
-        # everywhere else.
-
-        assert level >= 0
-
-        # don't do anything fancy with non-lists
-        if not lang.Cons.is_list(sexp):
-            return sexp
-
-        # evaluate unquoted expressions (if any) when given a list
-        result = []
-        for item in sexp:
-            if (lang.Cons.is_list(item) and len(item) > 0 and
-                    isinstance(item.car, lang.Symbol)):
-                # quasiquote
-                if item.car.value == tokens.QUASIQUOTE_LONG:
-                    # further nesting always preserves the quasiquote expression
-                    util.ensure_args(item.cdr, num_required=1)
-                    result.append(quasiquote_evaluate(item, env, level + 1))
-
-                # unquote
-                elif item.car.value == tokens.UNQUOTE_LONG:
-                    util.ensure_args(item.cdr, num_required=1)
-
-                    if level == 0:
-                        # evaluate item directly if we're fully unquoted
-                        a = evaluate(item.cdr.car, env)
-                    else:
-                        # otherwise, nest a deeper quasiquote and leave this alone
-                        a = quasiquote_evaluate(item, env, level - 1)
-
-                    result.append(a)
-
-                # unquote-splicing
-                elif item.car.value == tokens.UNQUOTE_SPLICING_LONG:
-                    util.ensure_args(item.cdr, num_required=1)
-                    if level == 0:
-                        result.extend(evaluate(item.cdr.car, env))
-                    else:
-                        result.append(quasiquote_evaluate(item, env, level - 1))
-
-                # normal lists
-                else:
-                    # qq-evaluate the item at the current level of nesting, add it
-                    result.append(quasiquote_evaluate(item, env, level))
-            else:
-                # not a list, length is 0, or first item isn't a symbol
-                result.append(quasiquote_evaluate(item, env, level))
-
-        # return the semi-evaluated arguments as a list
-        return lang.Cons.build(*result)
+    def evaluate(self, parent, spec, body, args):
+        raise NotImplementedError()
 
 class CallableEvaluator(Evaluator):
     '''Build a new user-defined callable.'''
@@ -394,7 +343,7 @@ class CallableEvaluator(Evaluator):
         # the type of Callable object to create
         self.callable_class = callable_class
 
-    def evaluate(self, parent, spec, body, args, qq_level=0):
+    def evaluate(self, parent, spec, body, args):
         # get the child callable's arguments and body
         new_args = args[0]
         new_body = args[1]
@@ -424,12 +373,12 @@ class MacroEvaluator(CallableEvaluator):
 
 class ExpandEvaluator(Evaluator):
     '''Expand a user-defined macro and return its S-expression.'''
-    def evaluate(self, parent, spec, body, args, qq_level=0):
+    def evaluate(self, parent, spec, body, args):
         raise NotImplementedError()
 
 class DefineEvaluator(Evaluator):
     '''Define a symbol in an environment and return the defined value.'''
-    def evaluate(self, parent, spec, body, args, qq_level=0):
+    def evaluate(self, parent, spec, body, args):
         symbol = args[0]
 
         util.ensure_type(Symbol, symbol)
@@ -450,7 +399,7 @@ class CondEvaluator(Evaluator):
     evaluates to True, returns nil.
     '''
 
-    def evaluate(self, parent, spec, body, args, qq_level=0):
+    def evaluate(self, parent, spec, body, args):
         for tup in args:
             # if tup is not an iterable, len() raises an error for us
             if len(tup) != 2:
@@ -476,7 +425,7 @@ class AndEvaluator(Evaluator):
     Evaluate Boolean 'and'. Returns False if any of the items evaluates to False,
     otherwise short-circuits and returns the final item.
     '''
-    def evaluate(self, parent, spec, body, args, qq_level=0):
+    def evaluate(self, parent, spec, body, args):
         last_item = None
         for item in args:
             last_item = yield Evaluator.build_evaluate(item)
@@ -490,7 +439,7 @@ class OrEvaluator(Evaluator):
     Evaluate Boolean 'or'. Returns the first argument that doesn't evaluate
     to False, otherwise returns False.
     '''
-    def evaluate(self, parent, spec, body, args, qq_level=0):
+    def evaluate(self, parent, spec, body, args):
         last_item = None
         for item in args:
             last_item = yield Evaluator.build_evaluate(item)
@@ -501,7 +450,7 @@ class OrEvaluator(Evaluator):
 
 class EvalEvaluator(Evaluator):
     '''Evaluate an S-expression and return the result.'''
-    def evaluate(self, parent, spec, body, args, qq_level=0):
+    def evaluate(self, parent, spec, body, args):
         sexp = yield Evaluator.build_evaluate(args[0])
         result = yield Evaluator.build_evaluate(sexp)
         yield Evaluator.build_return(result)
@@ -511,7 +460,7 @@ class LoadEvaluator(Evaluator):
     Interpret a file as a list of S-expressions and evaluate them into the
     current environment.
     '''
-    def evaluate(self, parent, spec, body, args, qq_level=0):
+    def evaluate(self, parent, spec, body, args):
         fname = args[0]
         util.ensure_type(basestring, fname)
 

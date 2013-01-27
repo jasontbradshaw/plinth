@@ -101,13 +101,13 @@ def evaluate(original_sexp, original_env):
         # lists are treated as function/macro calls
         else:
             # get the next S-expression from the frame's ongoing evaluation
-            action, sexp, env, qq_level = frame.evaluate()
+            action, sexp, env= frame.evaluate()
 
             # add frames to the stack and evaluate them until the evaluator
             # tells us to return a result.
             if action is lang.Evaluator.EVALUATE:
                 # use the new environment if specified, else the frame's
-                stack.append(Frame(sexp, env or frame.env, frame, qq_level))
+                stack.append(Frame(sexp, env or frame.env, frame))
             elif action is lang.Evaluator.RETURN:
                 frame.parent.add_result(sexp)
                 stack.pop()
@@ -119,7 +119,7 @@ def evaluate(original_sexp, original_env):
     return result_frame.results[0]
 
 class Frame:
-    def __init__(self, sexp, env, parent, qq_level=0):
+    def __init__(self, sexp, env, parent):
         self.sexp = sexp
         self.env = env
         self.parent = parent

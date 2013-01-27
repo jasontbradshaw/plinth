@@ -432,7 +432,7 @@ class DefineEvaluator(Evaluator):
     def evaluate(self, parent, spec, body, args, qq_level=0):
         symbol = args[0]
 
-        util.ensure_type(symbol, Symbol)
+        util.ensure_type(Symbol, symbol)
 
         value = yield Evaluator.build_evaluate(args[1])
 

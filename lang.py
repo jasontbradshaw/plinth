@@ -337,6 +337,7 @@ class CallableEvaluator(Evaluator):
     def __init__(self, callable_class):
         # the type of Callable object to create
         self.callable_class = callable_class
+        Evaluator.__init__(self)
 
     def evaluate(self, parent, spec, body, args):
         # get the child callable's arguments and body

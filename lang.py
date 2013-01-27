@@ -613,7 +613,7 @@ class Macro(Callable):
 
     def __str__(self):
         return Callable.build_string('macro', self.spec,
-                self['name'] if 'name' in self else None, self.spec)
+                self['name'] if 'name' in self else None)
 
 class PrimitiveFunction(Function):
     '''

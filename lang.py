@@ -326,11 +326,6 @@ class QuoteEvaluator(Evaluator):
     def evaluate(self, parent, spec, body, args):
         yield Evaluator.build_return(args[0])
 
-class UnquoteEvaluator(Evaluator):
-    '''Handle un-quoting select S-expressions.'''
-    def evaluate(self, parent, spec, body, args):
-        raise NotImplementedError()
-
 class QuasiquoteEvaluator(Evaluator):
     '''Handle quasiquoting an S-expression.'''
     def evaluate(self, parent, spec, body, args):

@@ -328,7 +328,6 @@ if __name__ == '__main__':
 
     # bind functions that need special treatment during evaluation
     bind(tokens.QUOTE_LONG, lambda e: None, lang.QuoteEvaluator)
-    bind(tokens.UNQUOTE_LONG, lambda e: None, lang.UnquoteEvaluator)
     bind(tokens.QUASIQUOTE_LONG, lambda e: None, lang.QuasiquoteEvaluator)
     bind(tokens.LAMBDA, lambda args, body: None, lang.LambdaEvaluator)
     bind(tokens.MACRO, lambda args, body: None, lang.MacroEvaluator)

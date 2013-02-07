@@ -4,7 +4,6 @@ import os
 import sys
 import traceback
 
-import argspec
 import errors
 import interpreter
 import lang
@@ -101,7 +100,7 @@ def evaluate(original_sexp, original_env):
         # lists are treated as function/macro calls
         else:
             # get the next S-expression from the frame's ongoing evaluation
-            action, sexp, env= frame.evaluate()
+            action, sexp, env = frame.evaluate()
 
             # add frames to the stack and evaluate them until the evaluator
             # tells us to return a result.

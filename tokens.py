@@ -113,13 +113,13 @@ def tokenize(source):
         elif c == ESCAPE_CHAR:
             if len(buf) > 0:
                 yield flush()
-            yield c
+            yield unicode(c)
 
         # add string delimiters
         elif c == STRING:
             if len(buf) > 0:
                 yield flush()
-            yield c
+            yield unicode(c)
 
         # consume whitespace by collecting it in the buffer
         elif c in WHITESPACE:
@@ -134,13 +134,13 @@ def tokenize(source):
         elif c == OPEN_PAREN:
             if len(buf) > 0:
                 yield flush()
-            yield c
+            yield unicode(c)
 
         # close parenthesis
         elif c == CLOSE_PAREN:
             if len(buf) > 0:
                 yield flush()
-            yield c
+            yield unicode(c)
 
         # just a normal character, so collect it in the buffer
         else:

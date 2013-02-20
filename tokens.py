@@ -8,6 +8,10 @@
 
 OPEN_PAREN = u'('
 CLOSE_PAREN = u')'
+QUOTE = u"'"
+QUASIQUOTE = u'`'
+UNQUOTE = u'~'
+UNQUOTE_SPLICING = '^'
 WHITESPACE = frozenset([u' ', u'\t', u'\n', u'\r', u'\f', u'\v'])
 ESCAPE_CHAR = u'\\'
 STRING = u'"'
@@ -39,7 +43,10 @@ EVAL = u'eval'
 LOAD = u'load'
 
 # quoting
-QUOTE = u'quote'
+QUOTE_LONG = u'quote'
+QUASIQUOTE_LONG = u'quasiquote'
+UNQUOTE_LONG = u'unquote'
+UNQUOTE_SPLICING_LONG = u'unquote-splicing'
 
 # math
 ADD = u'+'
@@ -64,6 +71,14 @@ NOT = u'not'
 CONS = u'cons'
 CAR = u'car'
 CDR = u'cdr'
+
+# used to de-sugar various syntactic elements
+SUGAR = {
+    QUOTE: QUOTE_LONG,
+    UNQUOTE: UNQUOTE_LONG,
+    QUASIQUOTE: QUASIQUOTE_LONG,
+    UNQUOTE_SPLICING: UNQUOTE_SPLICING_LONG
+}
 
 def tokenize(source):
     '''
@@ -141,6 +156,12 @@ def tokenize(source):
             if len(buf) > 0:
                 yield flush()
             yield unicode(c)
+
+        # quotes, unquotes, and quasiquotes
+        elif c in SUGAR:
+            if len(buf) > 0:
+                yield flush()
+            yield c
 
         # just a normal character, so collect it in the buffer
         else:

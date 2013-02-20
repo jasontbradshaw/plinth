@@ -74,9 +74,8 @@ def quasiquote_evaluate(sexp, env, level=0):
 
 def evaluate(original_sexp, original_env):
     '''
-    Given an Atom or list, evaluates it using the given environment
-    (global by default) and returns the result as represented in our language
-    constructs.
+    Given an Atom or list, evaluates it using the given environment and returns
+    the result as represented in our language constructs.
     '''
 
     result_frame = Frame(None, None, None)
@@ -182,7 +181,7 @@ class PlinthInterpreter(interpreter.Interpreter):
         self.intro = 'plinth 0.2\n-----------'
 
         # the path to the standard library
-        self.stdlib_path = './stdlib.plinth'
+        self.stdlib_path = None #'./stdlib.plinth'
 
         self.standard_prompt = '> '
         self.continue_prompt = ': '
@@ -210,10 +209,9 @@ class PlinthInterpreter(interpreter.Interpreter):
     def post_intro(self, intro):
         '''Load the standard library and any files passed in as arguments.'''
         # load the standard library, if available
-        if os.path.exists(self.stdlib_path):
+        if self.stdlib_path is not None and os.path.exists(self.stdlib_path):
             for result in self.parse_file(self.stdlib_path):
-                #evaluate(result, self.env)
-                pass
+                evaluate(result, self.env)
 
         # evaluate every expression in all files into the global environment
         for path in sys.argv[1:]:

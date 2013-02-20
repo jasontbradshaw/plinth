@@ -327,9 +327,22 @@ class QuoteEvaluator(Evaluator):
         yield Evaluator.build_return(args[0])
 
 class QuasiquoteEvaluator(Evaluator):
-    '''Handle quasiquoting an S-expression.'''
+    '''Selectively evaluate a quoted S-expression.'''
+
+    # symbols for the special tokens
+    QUASIQUOTE_SYMBOL = Symbol(tokens.QUASIQUOTE_LONG)
+    UNQUOTE_SYMBOL = Symbol(tokens.UNQUOTE_LONG)
+    UNQUOTE_SPLICING_SYMBOL = Symbol(tokens.UNQUOTE_SPLICING_LONG)
+
+    # symbols that cause special evaluation to happen
+    SYMBOLS = frozenset((
+        QUASIQUOTE_SYMBOL,
+        UNQUOTE_SYMBOL,
+        UNQUOTE_SPLICING_SYMBOL
+    ))
+
     def evaluate(self, parent, spec, body, args):
-        raise NotImplementedError()
+        raise NotImplementedError('quasiquote is not yet implemented!')
 
 class CallableEvaluator(Evaluator):
     '''Build a new user-defined callable.'''
@@ -337,7 +350,6 @@ class CallableEvaluator(Evaluator):
     def __init__(self, callable_class):
         # the type of Callable object to create
         self.callable_class = callable_class
-        Evaluator.__init__(self)
 
     def evaluate(self, parent, spec, body, args):
         # get the child callable's arguments and body

@@ -312,15 +312,10 @@ if __name__ == '__main__':
     # the default global environment
     env = lang.Environment(None)
 
-    def bind(token, function, evaluator_class=None):
+    def bind(token, function, evaluator_class=PythonMethodEvaluator):
         '''Binds a primitive function to a token in the global environment.'''
         s = lang.Symbol(token)
-
-        if evaluator_class is not None:
-            f = lang.PrimitiveFunction(env, function, evaluator_class)
-        else:
-            f = lang.PrimitiveFunction(env, function)
-
+        f = lang.PrimitiveFunction(env, function, evaluator_class)
         env[s] = f
 
     # bind functions that need special treatment during evaluation

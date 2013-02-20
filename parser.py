@@ -44,10 +44,6 @@ def parse(token_source):
     string_buf = []
     is_escaped = False
 
-    # we store the locations and indexes where we added sugary tokens so we can
-    # quickly post-process them when done parsing.
-    sugar_locations = []
-
     # iterate over every character in the source string
     for token in token_source:
 
@@ -91,12 +87,6 @@ def parse(token_source):
         elif token == tokens.CLOSE_PAREN:
             dedent()
 
-        # quote, unquote, quasiquote (the only sugar in our language)
-        elif token in tokens.SUGAR:
-            # we mark the stack and position of the token for quick reference
-            sugar_locations.append((stack[-1], len(stack[-1])))
-            add_token(token)
-
         # mark strings
         elif token == tokens.STRING:
             # mark us as being in a string, let the first case deal with rest
@@ -114,22 +104,6 @@ def parse(token_source):
     # tokens list, and it never gets popped).
     if len(stack) > 1:
         raise errors.CloseParenError.build()
-
-    # process all the quote marks into quote functions. we process right-to-left
-    # to allow for occurences of "''foo" and the like.
-    for scope, i in reversed(sugar_locations):
-        # quotes must have something to consume
-        if i == len(scope) - 1:
-            raise errors.ParserError('invalid quote syntax')
-
-        # have the sugar mark consume the item to its right and replace the
-        # slots the two once filled with a new scope containing the desugared
-        # function and its argument.
-        new_symbol = lang.Symbol(tokens.SUGAR[scope[i].value])
-        new_item = scope[i + 1]
-
-        scope[i] = [new_symbol, new_item]
-        del scope[i + 1]
 
     # return the canonical abstract syntax tree as a Cons list
     return lang.Cons.build(*ast)

@@ -193,10 +193,6 @@ class PlinthInterpreter(interpreter.Interpreter):
         self.completer_delimiters = ''.join([
             tokens.OPEN_PAREN,
             tokens.CLOSE_PAREN,
-            tokens.QUOTE,
-            tokens.QUASIQUOTE,
-            tokens.UNQUOTE,
-            tokens.UNQUOTE_SPLICING,
             tokens.ESCAPE_CHAR,
             ''.join(tokens.WHITESPACE)
         ])
@@ -248,9 +244,9 @@ class PlinthInterpreter(interpreter.Interpreter):
             self.source += source
 
             # evaluate every entered expression sequentially
-            for result in parser.parse(tokens.tokenize(self.source)):
-                self.stdout.write(util.to_string(evaluate(result, self.env)) +
-                        os.linesep)
+            for sexp in parser.parse(tokens.tokenize(self.source)):
+                result_string = util.to_string(evaluate(sexp, self.env))
+                self.stdout.write(result_string + os.linesep)
 
             # reset the prompt and source
             self.prompt = self.standard_prompt
@@ -312,15 +308,14 @@ if __name__ == '__main__':
     # the default global environment
     env = lang.Environment(None)
 
-    def bind(token, function, evaluator_class=PythonMethodEvaluator):
+    def bind(token, function, evaluator_class=lang.PythonMethodEvaluator):
         '''Binds a primitive function to a token in the global environment.'''
         s = lang.Symbol(token)
         f = lang.PrimitiveFunction(env, function, evaluator_class)
         env[s] = f
 
     # bind functions that need special treatment during evaluation
-    bind(tokens.QUOTE_LONG, lambda e: None, lang.QuoteEvaluator)
-    bind(tokens.QUASIQUOTE_LONG, lambda e: None, lang.QuasiquoteEvaluator)
+    bind(tokens.QUOTE, lambda e: None, lang.QuoteEvaluator)
     bind(tokens.LAMBDA, lambda args, body: None, lang.LambdaEvaluator)
     bind(tokens.MACRO, lambda args, body: None, lang.MacroEvaluator)
     bind(tokens.MACRO_EXPAND, lambda macro, *args: None, lang.ExpandEvaluator)

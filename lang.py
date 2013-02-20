@@ -578,12 +578,11 @@ class PrimitiveFunction(Function):
     of the constructs that enables the language to function.
     '''
 
-    def __init__(self, parent, method, evaluator_class=PythonMethodEvaluator):
+    def __init__(self, parent, method, evaluator_class):
         '''
         Create a primitive function that works much like a normal function,
-        except that the body is a Python method, and the default evaluator
-        treats it as such. If a different evaluator_class is specified, its
-        evaluation methodology is used instead (i.e. for quote, define, etc.).
+        except that the body is a Python method and evaluation is controlled by
+        the specified class.
         '''
 
         Callable.__init__(self, evaluator_class)

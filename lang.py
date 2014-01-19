@@ -5,18 +5,17 @@ import inspect
 import itertools
 import re
 
-import argspec
 import tokens
 import util
 
 class Object(object):
     '''The base class all custom language constructs inherit from.'''
 
-    def __init__(self, value, can_modify_meta=True):
+    def __init__(self, value=None, can_modify_meta=True):
         self.value = value
 
-        # an internal map that can contain arbitrary metadata
-        self.meta = Map()
+        # an internal dict that can contain arbitrary metadata
+        self.meta = {}
 
         # whether the metadata for this object is modifiable. disabled on
         # singleton objects like nil and the booleans.
@@ -48,7 +47,7 @@ class Object(object):
         return hash(self.value)
 
     @staticmethod
-    def parse(self, token):
+    def parse(token):
         '''
         Returns a new object based on the token value passed in. If the given
         token was invalid, None should be returned. Subclasses should override
@@ -101,23 +100,50 @@ class Number(Object):
         '''
         return isinstance(other, Number) and self.value == other.value
 
-    # delegate the numeric magic methods to the values
-    def __add__(self, other): return self.value + other.value
-    def __sub__(self, other): return self.value - other.value
-    def __mul__(self, other): return self.value * other.value
-    def __div__(self, other): return self.value // other.value
-    def __floordiv__(self, other): return self.value / other.value
-    def __mod__(self, other): return self.value % other.value
-    def __divmod__(self, other): return divmod(self.value, other.value)
-    def __pow__(self, other): return self.value ** other.value
-    def __lshift__(self, other): return self.value << other.value
-    def __rshift__(self, other): return self.value >> other.value
-    def __and__(self, other): return self.value & other.value
-    def __or__(self, other): return self.value | other.value
-    def __xor__(self, other): return self.value ^ other.value
+    # delegate the numeric magic methods to the values and cast the return value
+    # to the appropriate type, given the classes being operated on.
+    def __add__(self, other):
+        return Number.choose(self, other)(self.value + other.value)
+    def __sub__(self, other):
+        return Number.choose(self, other)(self.value - other.value)
+    def __mul__(self, other):
+        return Number.choose(self, other)(self.value * other.value)
+    def __div__(self, other):
+        return Number.choose(self, other)(self.value / other.value)
+    def __floordiv__(self, other):
+        return Number.choose(self, other)(self.value // other.value)
+    def __mod__(self, other):
+        return Number.choose(self, other)(self.value % other.value)
+    def __divmod__(self, other):
+        return Number.choose(self, other)(divmod(self.value, other.value))
+    def __pow__(self, other):
+        return Number.choose(self, other)(self.value ** other.value)
+    def __lshift__(self, other):
+        return Number.choose(self, other)(self.value << other.value)
+    def __rshift__(self, other):
+        return Number.choose(self, other)(self.value >> other.value)
+    def __and__(self, other):
+        return Number.choose(self, other)(self.value & other.value)
+    def __or__(self, other):
+        return Number.choose(self, other)(self.value | other.value)
+    def __xor__(self, other):
+        return Number.choose(self, other)(self.value ^ other.value)
 
     @staticmethod
-    def parse(self, token):
+    def choose(self, *subclasses):
+        '''Given a list of Number subclasses, choose the 'winning' class.'''
+
+        # since we currently have only two number types, we have to choose only
+        # between Float and Integer. Floats pollute whatever they're mixed with,
+        # so they always win if present.
+        for subclass in subclasses:
+            if isinstance(subclass, Float):
+                return Float
+
+        return Integer
+
+    @staticmethod
+    def parse(token):
         '''
         Attempt to return a specific number for the given string. Returns None
         if doing so is impossible.
@@ -150,7 +176,7 @@ class Integer(Number):
         return self.value
 
     @staticmethod
-    def parse(self, token):
+    def parse(token):
         if Integer.REGEX.match(token):
             # get the base of the number (default 10)
             base = 10
@@ -158,7 +184,7 @@ class Integer(Number):
                 base = Integer.BASES[token[1]]
 
             # parse the number using our base value
-            return int(token, base)
+            return Integer(int(token, base))
 
         return None
 
@@ -171,9 +197,9 @@ class Float(Number):
         Number.__init__(self, value)
 
     @staticmethod
-    def parse(self, token):
+    def parse(token):
         if Float.REGEX.match(token):
-            return float(token)
+            return Float(float(token))
         return None
 
 class Boolean(Object):
@@ -190,7 +216,7 @@ class Boolean(Object):
         return self.value
 
     @staticmethod
-    def parse(self, token):
+    def parse(token):
         '''Return the singleton instance for the given token.'''
         if token == tokens.TRUE:
             return TRUE
@@ -200,7 +226,7 @@ class String(Object):
     '''A string of characters.'''
 
     @staticmethod
-    def parse(self, token):
+    def parse(token):
         # strings have string tokens at the beginning and end
         if (len(token) >= 2 and
                 token[0] == tokens.STRING_START and
@@ -304,10 +330,10 @@ class Cons(Object):
 class Symbol(Object):
     '''Symbols store other values, and evaluate to their stored values.'''
 
-    REGEX = re.compile('^[a-zA-Z0-9_-!?<>]+$')
+    REGEX = re.compile('^[a-zA-Z0-9\-_!?<>]+$')
 
     @staticmethod
-    def parse(self, token):
+    def parse(token):
         if Symbol.REGEX.match(token):
             return Symbol(token)
         return None
@@ -340,14 +366,14 @@ class Keyword(Object):
         return self is other
 
     @staticmethod
-    def parse(self, token):
+    def parse(token):
         # keywords only differ from symbols in that they start differently
         kw = token[1:]
         if token[0] == tokens.KEYWORD and Keyword.REGEX.match(kw):
             return Keyword(kw)
         return None
 
-class Map(Object, collections.OrderedDict):
+class Map(Object):
     '''
     Holds language constructs mapped to other language constructs. Items are
     ordered in insertion order. Overwriting an existing item leave the
@@ -355,12 +381,17 @@ class Map(Object, collections.OrderedDict):
     '''
 
     def __init__(self):
-        collections.OrderedDict.__init__(self)
-        Object.__init__(self, collections.OrderdDict())
+        Object.__init__(self, collections.OrderedDict())
 
     def __hash__(self):
         '''It's too difficult to hash dicts, so we don't even try.'''
         raise TypeError('unhashable type: ' + self.__class__.__name__)
+
+    def get(self, key):
+        return self.value[key]
+
+    def set(self, key, value):
+        self.value[key] = value
 
 class Vector(list):
     '''A static list of language constructs.'''

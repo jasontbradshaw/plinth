@@ -114,8 +114,6 @@ class Number(Object):
         return Number.choose(self, other)(self.value // other.value)
     def __mod__(self, other):
         return Number.choose(self, other)(self.value % other.value)
-    def __divmod__(self, other):
-        return Number.choose(self, other)(divmod(self.value, other.value))
     def __pow__(self, other):
         return Number.choose(self, other)(self.value ** other.value)
     def __lshift__(self, other):
@@ -131,7 +129,7 @@ class Number(Object):
 
     @staticmethod
     def choose(self, *subclasses):
-        '''Given a list of Number subclasses, choose the 'winning' class.'''
+        '''Given some Number subclasses as args, choose the 'winning' class.'''
 
         # since we currently have only two number types, we have to choose only
         # between Float and Integer. Floats pollute whatever they're mixed with,

@@ -1,8 +1,10 @@
+from __future__ import unicode_literals
+
 import os
 import readline
 import sys
 
-class Interpreter:
+class Interpreter(object):
 
     def __init__(self, complete_key='tab', prompt='> ', stdin=None, stdout=None):
         '''

@@ -1,6 +1,5 @@
 import numbers
 
-import errors
 import lang
 import tokens
 import util

@@ -1,18 +1,38 @@
+from __future__ import unicode_literals
+
+import collections
 import inspect
 import itertools
+import re
 
 import argspec
-import errors
 import tokens
 import util
 
-class Atom:
+class Object(object):
     '''The base class all custom language constructs inherit from.'''
 
-    def __init__(self, value):
+    def __init__(self, value, can_modify_meta=True):
         self.value = value
 
+        # an internal map that can contain arbitrary metadata
+        self.meta = Map()
+
+        # whether the metadata for this object is modifiable. disabled on
+        # singleton objects like nil and the booleans.
+        self.can_modify_meta = can_modify_meta
+
+    def __getitem__(self, key):
+        return self.meta[key]
+
+    def __setitem__(self, key, value):
+        # prevent 'set' access to unmodifiable metadata
+        if not self.can_modify_meta:
+            raise ValueError('metadata map locked!')
+        self.meta[key] = value
+
     def __str__(self):
+        '''Default to returning our value's string.'''
         return unicode(self.value)
 
     def __repr__(self):
@@ -20,104 +40,203 @@ class Atom:
         return self.__class__.__name__ + '(' + repr(self.value) + ')'
 
     def __eq__(self, other):
+        '''Equal if we're the same type and our values are equal.'''
         return isinstance(other, self.__class__) and self.value == other.value
 
-    @staticmethod
-    def to_atom(token):
-        '''
-        Takes the given string token and returns the class representing that
-        string in its most natural form (int, str, Symbol, etc.).
-        '''
-
-        # number types: complex are invalid floats, and floats are invalid ints
-        try:
-            # automatically returns 'long' if necessary
-            return int(token)
-        except:
-            try:
-                return float(token)
-            except:
-                try:
-                    return complex(token)
-                except:
-                    pass
-
-        # boolean
-        if token.lower() == tokens.TRUE:
-            return True
-        elif token.lower() == tokens.FALSE:
-            return False
-
-        # string (strips wrapping string tokens)
-        elif token.startswith(tokens.STRING) and token.endswith(tokens.STRING):
-            return unicode(token[len(tokens.STRING):-len(tokens.STRING)])
-
-        # the base case for all tokens is a symbol
-        return Symbol(token)
-
-class Cons:
-    '''Represents a pair of elements.'''
-
-    def __init__(self, car, cdr):
-        self.car = car
-        self.cdr = cdr
+    def __hash__(self):
+        '''Delegate to our value by default.'''
+        return hash(self.value)
 
     @staticmethod
-    def build(*items):
-        '''Build a Cons sequence recursively from a nested list structure.'''
+    def parse(self, token):
+        '''
+        Returns a new object based on the token value passed in. If the given
+        token was invalid, None should be returned. Subclasses should override
+        this method with their own specific implementation.
 
-        result = NIL
+        This particular instance takes the given token string and returns an
+        instance of the class that best represents that token in its most
+        natural form (int, str, Symbol, etc.).
+        '''
 
-        for item in reversed(items):
-            if isinstance(item, (list, tuple)):
-                result = Cons(Cons.build(*item), result)
-            else:
-                result = Cons(item, result)
+        result = Integer.parse(token)
+        if result is not None:
+            return result
+
+        result = Float.parse(token)
+        if result is not None:
+            return result
+
+        result = Boolean.parse(result)
+        if result is not None:
+            return result
+
+        result = String.parse(result)
+        if result is not None:
+            return result
+
+        result = Keyword.parse(result)
+        if result is not None:
+            return result
+
+        result = Symbol.parse(result)
+
+        # symbols are the base case for all tokens. if we can't parse this,
+        # there's nothing else to try!
+        if result is None:
+            raise ValueError('invalid token: ' + unicode(token))
 
         return result
 
-    @staticmethod
-    def build_list(items):
-        '''Same as build, but takes a single list as its arguments instead.'''
-        return Cons.build(*items)
+class Number(Object):
+    '''A number in our language.'''
+
+    def __init__(self, value):
+        Object.__init__(self, value)
+
+    def __eq__(self, other):
+        '''
+        Numbers can be equal to each other even if they're different types, as
+        long as their values are equivalent.
+        '''
+        return isinstance(other, Number) and self.value == other.value
+
+    # delegate the numeric magic methods to the values
+    def __add__(self, other): return self.value + other.value
+    def __sub__(self, other): return self.value - other.value
+    def __mul__(self, other): return self.value * other.value
+    def __div__(self, other): return self.value // other.value
+    def __floordiv__(self, other): return self.value / other.value
+    def __mod__(self, other): return self.value % other.value
+    def __divmod__(self, other): return divmod(self.value, other.value)
+    def __pow__(self, other): return self.value ** other.value
+    def __lshift__(self, other): return self.value << other.value
+    def __rshift__(self, other): return self.value >> other.value
+    def __and__(self, other): return self.value & other.value
+    def __or__(self, other): return self.value | other.value
+    def __xor__(self, other): return self.value ^ other.value
 
     @staticmethod
-    def is_list(e):
-        '''Returns whether an element is a list or not (nil is a list).'''
+    def parse(self, token):
+        '''
+        Attempt to return a specific number for the given string. Returns None
+        if doing so is impossible.
+        '''
 
-        # nil is a list
-        if e is NIL:
-            return True
+        x = Integer.parse(token)
+        if x is None:
+            x = Float.parse(token)
 
-        # non-cons can't be lists
-        if not isinstance(e, Cons):
-            return False
+        return x
 
-        # only cons that len() works on are lists (throws an exception otherwise)
-        try:
-            return bool(len(e)) or True
-        except errors.WrongArgumentTypeError:
-            return False
+class Integer(Number):
+    '''A fixed-precision arbitrary-length number.'''
+
+    REGEX = re.compile('^-?([0-9]+|0[xX][a-fA-F0-9]+|0[bB][01]+|0[oO][0-7]+)$')
+
+    # characters mapped to base values. this works since we use the '0_' system
+    # to represent numbers in different bases, where the second character always
+    # uniquely identifies the base.
+    BASES = {
+        'b': 2, 'B': 2,
+        'o': 8, 'O': 8,
+        'x': 16, 'X': 16,
+    }
+
+    def __init__(self, value):
+        Number.__init__(self, value)
+
+    def __hash__(self):
+        return self.value
+
+    @staticmethod
+    def parse(self, token):
+        if Integer.REGEX.match(token):
+            # get the base of the number (default 10)
+            base = 10
+            if len(token) > 2 and token[1] in Integer.BASES:
+                base = Integer.BASES[token[1]]
+
+            # parse the number using our base value
+            return int(token, base)
+
+        return None
+
+class Float(Number):
+    '''A rational number expressed to a fixed number of decimal places.'''
+
+    REGEX = re.compile('^-?[0-9]+\.[0-9]+$')
+
+    def __init__(self, value):
+        Number.__init__(self, value)
+
+    @staticmethod
+    def parse(self, token):
+        if Float.REGEX.match(token):
+            return float(token)
+        return None
+
+class Boolean(Object):
+    def __init__(self, value):
+        # disable metadata modification since this is a singleton class
+        Object.__init__(self, value, can_modify_meta=False)
+
+    def __eq__(self, other):
+        # singletons can only equal themselves!
+        return self is other
+
+    def __nonzero__(self):
+        '''Return our value directly since it's already a boolean.'''
+        return self.value
+
+    @staticmethod
+    def parse(self, token):
+        '''Return the singleton instance for the given token.'''
+        if token == tokens.TRUE:
+            return TRUE
+        return FALSE
+
+class String(Object):
+    '''A string of characters.'''
+
+    @staticmethod
+    def parse(self, token):
+        # strings have string tokens at the beginning and end
+        if (len(token) >= 2 and
+                token[0] == tokens.STRING_START and
+                token[-1] == tokens.STRING_END):
+            return String(token[1:-2])
+
+        return None
+
+class Cons(Object):
+    '''Represents a pair of elements.'''
+
+    def __init__(self, car, cdr):
+        Object.__init__(self, None)
+
+        self.car = car
+        self.cdr = cdr
 
     def __str_helper(self, item):
         # nil has no contents
         if item is NIL:
-            return u''
+            return ''
 
         if item.cdr is NIL:
-            return util.to_string(item.car)
+            return unicode(item.car)
 
         if not isinstance(item.cdr, Cons):
-            return util.to_string(item.car) + u' . ' + util.to_string(item.cdr)
+            return unicode(item.car) + ' . ' + unicode(item.cdr)
 
-        return util.to_string(item.car) + u' ' + self.__str_helper(item.cdr)
+        return unicode(item.car) + ' ' + self.__str_helper(item.cdr)
 
     def __str__(self):
-        return u'(' + self.__str_helper(self) + ')'
+        return '(' + self.__str_helper(self) + ')'
 
     def __repr__(self):
         return (self.__class__.__name__ +
-               u'(' + repr(self.car) + ', ' + repr(self.cdr) + ')')
+               '(' + repr(self.car) + ', ' + repr(self.cdr) + ')')
 
     def __len__(self):
         # nil is the empty list
@@ -150,50 +269,108 @@ class Cons:
                 raise errors.WrongArgumentTypeError('not a proper list: ' +
                         unicode(self))
 
-    def __getitem__(self, index):
-        '''Allow indexing into the list.'''
-        if isinstance(index, slice):
-            if index.stop < len(self):
-                raise IndexError(self.__class__.__name__.lower() +
-                        ' does not support end indexes')
-            s = self
-            for i in xrange(index.start):
-                if s is NIL:
-                    break
-                s = s.cdr
-            return s
-        else:
-            index += len(self) if index < 0 else 0
-            for i, item in enumerate(self):
-                if i == index:
-                    return item
-            raise IndexError(self.__class__.__name__.lower() +
-                    ' index out of range')
+    @staticmethod
+    def build(*items):
+        '''Build a Cons sequence recursively from a nested list structure.'''
 
-# the singleton 'nil' value, an empty Cons: we define it here so Cons can use it
-NIL = Cons(None, None)
+        result = NIL
 
-class Symbol(Atom):
+        for item in reversed(items):
+            if isinstance(item, (list, tuple)):
+                result = Cons(Cons.build(*item), result)
+            else:
+                result = Cons(item, result)
+
+        return result
+
+    @staticmethod
+    def is_list(e):
+        '''Returns whether an element is a list or not (nil is a list).'''
+
+        # nil is a list
+        if e is NIL:
+            return True
+
+        # non-cons can't be lists
+        if not isinstance(e, Cons):
+            return False
+
+        # only cons that len() works on are lists (throws an exception otherwise)
+        try:
+            return bool(len(e)) or True
+        except errors.WrongArgumentTypeError:
+            return False
+
+class Symbol(Object):
     '''Symbols store other values, and evaluate to their stored values.'''
 
-    def __init__(self, value):
-        '''Symbols are stored and looked up by their string names.'''
+    REGEX = re.compile('^[a-zA-Z0-9_-!?<>]+$')
 
-        Atom.__init__(self, unicode(value))
+    @staticmethod
+    def parse(self, token):
+        if Symbol.REGEX.match(token):
+            return Symbol(token)
+        return None
+
+class Keyword(Object):
+    '''
+    A keyword is a named singleton that evaluates to itself. When created,
+    they're stored in a global dict by the interpreter, and are re-allocated to
+    new calls as singletons once created. Other than that, they are essentially
+    identical to symbols.
+    '''
+
+    # keywords have exactly the same naming rules as symbols!
+    REGEX = Symbol.REGEX
+
+    def __init__(self, value, comp):
+        # since all keywords are singletons, they can't have metadata
+        Object.__init__(self, value, can_modify_meta=False)
 
     def __hash__(self):
-        return hash(self.value)
+        # this is alright since symbols can't contain the keyword token, so
+        # their values should never overlap.
+        return hash(tokens.KEYWORD + self.value)
+
+    def __str__(self):
+        return tokens.KEYWORD + self.value
 
     def __eq__(self, other):
-        return isinstance(other, Symbol) and self.value == other.value
+        # singletons can only be equal when they are the same object!
+        return self is other
 
-class Callable(Atom):
-    '''A base class for object in our language that can be 'called'.'''
+    @staticmethod
+    def parse(self, token):
+        # keywords only differ from symbols in that they start differently
+        kw = token[1:]
+        if token[0] == tokens.KEYWORD and Keyword.REGEX.match(kw):
+            return Keyword(kw)
+        return None
 
-    def __init__(self, name=None, docstring=None):
-        '''A name can later be set for display purposes.'''
-        Atom.__init__(self, name)
-        self.docstring = docstring
+class Map(Object, collections.OrderedDict):
+    '''
+    Holds language constructs mapped to other language constructs. Items are
+    ordered in insertion order. Overwriting an existing item leave the
+    overwritten item in its original insertion position.
+    '''
+
+    def __init__(self):
+        collections.OrderedDict.__init__(self)
+        Object.__init__(self, collections.OrderdDict())
+
+    def __hash__(self):
+        '''It's too difficult to hash dicts, so we don't even try.'''
+        raise TypeError('unhashable type: ' + self.__class__.__name__)
+
+class Vector(list):
+    '''A static list of language constructs.'''
+
+class Callable(Object):
+    '''A base class for objects in our language that can be 'called'.'''
+
+    def __eq__(self, other):
+        '''Callables are only equal to themselves.'''
+        return other is self
 
     @staticmethod
     def build_string(kind, name, spec):
@@ -204,11 +381,13 @@ class Callable(Atom):
         use to build the arguments list.
         '''
 
-        s = u'<' + unicode(kind)
+        s = '<' + unicode(kind)
 
-        # set the function name if possible
-        if name is not None:
-            s += ' ' + unicode(name)
+        # TODO: set the function name if possible
+        # try:
+        #     s += ' ' + unicode(self[Keyword.parse(':fn-name')])
+        # except:
+        #     pass
 
         s += ' ('
 
@@ -219,26 +398,17 @@ class Callable(Atom):
                 a.append(unicode(arg))
             elif arg_type == argspec.ArgSpec.OPTIONAL:
                 arg, default = arg
-                a.append('(' + unicode(arg) + ' ' + util.to_string(default) + ')')
+                a.append('(' + unicode(arg) + ' ' + unicode(default) + ')')
             elif arg_type == argspec.ArgSpec.VARIADIC:
                 a.append(unicode(arg))
                 a.append(tokens.VARIADIC_ARG)
             else:
-                raise ValueError('Unhandled arg type: ' + arg_type)
+                raise ValueError('unhandled arg type: ' + arg_type)
 
         s += ' '.join(a)
         s += ')>'
 
         return s
-
-    def name(self, name):
-        # set the name if it hasn't been stored yet
-        if self.value is None:
-            self.value = name
-
-    def __eq__(self, other):
-        '''Callables are only equal if the other callable is this callable.'''
-        return isinstance(other, self.__class__) and other is self
 
 class Function(Callable):
     '''
@@ -246,44 +416,7 @@ class Function(Callable):
     arguments, have a body, and are evaluated in some context.
     '''
 
-    def __init__(self, evaluate, parent, args, body, name=None):
-        '''
-        Creates a function given a list of its arguments, its body, and
-        its parent environment, i.e. the environment it was created and will be
-        evaluated in (its closure). If the last argument is the variadic
-        argument symbol, the preceding symbol is treated as a variadic arg.
-        Optional arguments follow required arguments but precede any variadic
-        arg, and consist of a two item list of symbol and expression, of which
-        the expression is evaluated immediately.
-        '''
-
-        # NOTE: arguments MUST come in the order: required, optional, variadic
-
-        assert isinstance(parent, Environment)
-
-        self.spec = argspec.ArgSpec.build(evaluate, parent, args)
-        self.body = body
-        self.parent = parent
-
-        Callable.__init__(self, name)
-
-    def __str__(self):
-        return Callable.build_string('function', self.value, self.spec)
-
-    def __call__(self, evaluate, *arg_values):
-        '''
-        Evaluate this function given a list of values to use for its arguments
-        and return the result.
-        '''
-
-        # create a new environment with the parent set as our parent environment
-        env = Environment(self.parent)
-
-        # fill it with the arg spec's values (throws an error if impossible)
-        env.update(self.spec.fill(arg_values, Cons.build_list))
-
-        # evaluate our body using the new environment and return the result
-        return evaluate(self.body, env)
+    # TODO: implement this!
 
 class PrimitiveFunction(Function):
     '''
@@ -291,52 +424,7 @@ class PrimitiveFunction(Function):
     of the constructs that enables the language to function.
     '''
 
-    def __init__(self, method, name=None):
-        '''
-        Create a primitive function that works much like a normal function,
-        except that the method is a Python function that does work using the
-        arguments given to __call__.
-        '''
-
-        self.method = method
-
-        # parse the arg spec (no support for keyword args)
-        args, vararg, _, defaults = inspect.getargspec(method)
-        defaults = () if defaults is None else defaults
-
-        self.spec = argspec.ArgSpec()
-
-        # get the counts for our respective arg types
-        num_required = len(args) - len(defaults)
-        num_optional = len(args) - num_required
-
-        # add required arguments
-        for arg in args[:num_required]:
-            self.spec.required(arg)
-
-        # add optional arguments, which come after required ones
-        for arg, default in itertools.izip(args[num_required:], defaults):
-            self.spec.optional(arg, default)
-
-        # add the variadic arg if it exists
-        if vararg is not None:
-            self.spec.variadic(vararg)
-
-        Callable.__init__(self, name)
-
-    def __str__(self):
-        return Callable.build_string('primitive-function', self.value,
-                self.spec)
-
-    def __call__(self, evaluate, *arg_values):
-        '''
-        Calls our internal method on the given arguments, ensuring that the
-        correct number of values was passed in. The evaluate argument is present
-        only for method-parity with the Function class.
-        '''
-
-        self.spec.validate(arg_values)
-        return self.method(*arg_values)
+    # TODO: implement this!
 
 class Macro(Callable):
     '''
@@ -345,28 +433,7 @@ class Macro(Callable):
     into the macro body.
     '''
 
-    def __init__(self, evaluate, env, args, body, name=None):
-
-        self.spec = argspec.ArgSpec.build(evaluate, env, args)
-        self.body = body
-
-        Callable.__init__(self, name)
-
-    def __str__(self):
-        return Callable.build_string('macro', self.value, self.spec)
-
-    def __call__(self, evaluate, env, *arg_sexps):
-        '''
-        Expand the macro's body in some environment using the given argument
-        expressions.
-        '''
-
-        # map symbols to their replacement expressions in a new environment
-        expand_env = Environment(env)
-        expand_env.update(self.spec.fill(arg_sexps, Cons.build_list))
-
-        # evaluate our body in the created environment
-        return evaluate(self.body, expand_env)
+    # TODO: implement this!
 
 class Environment(dict):
     '''
@@ -396,10 +463,15 @@ class Environment(dict):
         error.
         '''
 
-        if symbol in self:
+        try:
             return self.get(symbol)
-        elif self.parent is not None:
-            return self.parent[symbol]
+        except KeyError:
+            if self.parent is not None:
+                return self.parent[symbol]
 
-        raise errors.SymbolNotFoundError.build(symbol)
+        raise ValueError('symbol not found: ' + unicode(symbol))
 
+# singletons
+NIL = Cons(None, None)
+TRUE = Boolean(True)
+FALSE = Boolean(False)

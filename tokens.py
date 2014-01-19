@@ -1,178 +1,218 @@
+from __future__ import unicode_literals
+
+import collections
+
 # the tokens module contains all the variables for matching the various tokens.
 # also contains the tokenize function for generating a stream of tokens from
 # some string input.
 
-#
-# syntactic constructs
-#
+# data structure delimiters
+LIST_START = '('
+LIST_END = ')'
+VECTOR_START = '['
+VECTOR_END = ']'
+MAP_START = '{'
+MAP_END = '}'
+SET_START = '|'
+SET_END = '|'
 
-OPEN_PAREN = u'('
-CLOSE_PAREN = u')'
-QUOTE = u"'"
-QUASIQUOTE = u'`'
-UNQUOTE = u'~'
+DATA = frozenset([
+    LIST_START,
+    LIST_END,
+    VECTOR_START,
+    VECTOR_END,
+    MAP_START,
+    MAP_END,
+    SET_START,
+    SET_END,
+])
+
+# prefix syntax
+QUOTE = "'"
+QUASIQUOTE = '`'
+UNQUOTE = '~'
 UNQUOTE_SPLICING = '^'
-WHITESPACE = frozenset([u' ', u'\t', u'\n', u'\r', u'\f', u'\v'])
-ESCAPE_CHAR = u'\\'
-STRING = u'"'
-COMMENT = u';'
-LINE_SEPARATORS = frozenset([u'\r', u'\n'])
-VARIADIC_ARG = u'...'
+KEYWORD = ':'
+
+# postfix syntax
+VARIADIC_ARG = '...'
+
+WHITESPACE = frozenset([
+    ' ',
+    '\t',
+    '\n',
+    '\r',
+    '\f',
+    '\v',
+    ',', # commas are whitespace, too!
+])
+
+ESCAPE_CHAR = '\\'
+STRING_START = '"'
+STRING_END = '"'
+COMMENT = ';'
 
 #
 # functions
 #
 
 # general
-LAMBDA = u'lambda'
-MACRO = u'macro'
-MACRO_EXPAND = u'expand'
-GENERATE_SYMBOL = u'gensym'
-DEFINE = u'define'
-COND = u'cond'
-TYPE = u'type'
+FUNCTION = 'fn'
+MACRO = 'macro'
+MACRO_EXPAND = 'expand'
+DEFINE = 'def'
+COND = 'cond'
+TYPE = 'type'
+KEYWORD_LONG = 'keyword'
 
 # boolean symbols
-TRUE = u'#t'
-FALSE = u'#f'
+TRUE = '#t'
+FALSE = '#f'
 
 # repl
-READ = u'read'
-PARSE = u'parse'
-EVAL = u'eval'
-LOAD = u'load'
+READ = 'read'
+PARSE = 'parse'
+EVAL = 'eval'
+LOAD = 'load'
 
-# quoting
-QUOTE_LONG = u'quote'
-QUASIQUOTE_LONG = u'quasiquote'
-UNQUOTE_LONG = u'unquote'
-UNQUOTE_SPLICING_LONG = u'unquote-splicing'
+# expanded sugar
+QUOTE_LONG = 'quote'
+QUASIQUOTE_LONG = 'quasiquote'
+UNQUOTE_LONG = 'unquote'
+UNQUOTE_SPLICING_LONG = 'unquote-splicing'
 
 # math
-ADD = u'+'
-SUBTRACT = u'-'
-MULTIPLY = u'*'
-DIVIDE = u'/'
-MODULUS = u'%'
-POWER = u'pow'
+ADD = '+'
+SUBTRACT = '-'
+MULTIPLY = '*'
+DIVIDE = '/'
+MODULUS = '%'
+POWER = 'pow'
 
 # comparison
-IS = u'is?'
-LISTP = u'list?'
-EQUAL = u'='
-GREATER_THAN = u'>'
+IS = 'is?'
+EQUAL = '='
+GREATER_THAN = '>'
 
 # logic
-AND = u'and'
-OR = u'or'
-NOT = u'not'
+AND = 'and'
+OR = 'or'
+NOT = 'not'
 
 # cons
-CONS = u'cons'
-CAR = u'car'
-CDR = u'cdr'
+CONS = 'cons'
+CAR = 'car'
+CDR = 'cdr'
 
 # used to de-sugar various syntactic elements
-SUGAR = {
+CONSUMERS = {
     QUOTE: QUOTE_LONG,
     UNQUOTE: UNQUOTE_LONG,
     QUASIQUOTE: QUASIQUOTE_LONG,
     UNQUOTE_SPLICING: UNQUOTE_SPLICING_LONG
 }
 
+# how we yield token data from the tokenize method
+Token = collections.namedtuple('Token', ['value', 'line', 'column'])
+
 def tokenize(source):
     '''
     Given a string source, returns a generator that reads it character by
-    character and yields all the tokens in sequence.
+    character and yields all the tokens in sequence as Token namedtuples of
+    (value, line, column). Both line and column are one-based.  Newlines are not
+    emitted.
     '''
 
     # buffer where uncommitted characters live
     buf = []
 
-    def flush():
+    # ugly hack to let us modify these within the flush function
+    buf_column = [-1]
+    buf_line = [-1]
+
+    def flush(line=buf_line, column=buf_column):
         '''Returns the buffer contents as a string and clears the buffer.'''
 
         # get the contents of the buffer as a string
-        result = u''.join(buf)
+        result = Token(''.join(buf), buf_line[0], buf_column[0])
 
         # uses __delslice__ method of the list so we modify original buffer
         # and not the local copy.
         del buf[:]
 
-        # return the contents of the buffer
+        # reset the buffer's start character index
+        buf_column[0] = -1
+
+        # return the contents and metadata of the buffer
         return result
 
-    # iterate over every character in the source string
-    for c in source:
+    # iterate over every character on every line in the source string
+    for line_index, line in enumerate(source.splitlines()):
 
-        # collect all comment characters as one token
-        if len(buf) > 0 and buf[0] == COMMENT:
-            # end the comment once a line separator is encountered
-            if c not in LINE_SEPARATORS:
+        # flush the buffer if it's non-empty
+        if len(buf) > 0: yield flush()
+
+        # set the new line index
+        buf_line[0] = line_index + 1
+
+        # there's no such thing as a multi-line token (besides a comment)
+        assert len(buf) == 0
+
+        # iterate over each character
+        for column, c in enumerate(line):
+            # collect all comment characters as one token
+            if len(buf) > 0 and buf[0] == COMMENT:
                 buf.append(c)
                 continue
 
-            # yield the comment as one token, add the character to the new buf
-            yield flush()
-            buf.append(c)
+            # add the first comment character to the buffer
+            elif c == COMMENT:
+                # clear the buffer of non-comment contents
+                if len(buf) > 0: yield flush()
+                buf.append(c)
 
-        # add the first comment character to the buffer
-        elif c == COMMENT:
-            # clear the buffer of non-comment contents
-            if len(buf) > 0:
-                yield flush()
+            # match escape characters, for having literal values in strings
+            elif c == ESCAPE_CHAR:
+                if len(buf) > 0: yield flush()
+                yield Token(c, buf_line[0], column + 1)
 
-            buf.append(c)
+            # add string delimiters
+            elif c == STRING_START or c == STRING_END:
+                if len(buf) > 0: yield flush()
+                yield Token(c, buf_line[0], column + 1)
 
-        # match escape characters, for having literal values in strings
-        elif c == ESCAPE_CHAR:
-            if len(buf) > 0:
-                yield flush()
-            yield c
+            # consume whitespace by collecting it in the buffer
+            elif c in WHITESPACE:
+                # flush non-whitespace chars before starting a whitespace buffer
+                if len(buf) > 0 and buf[-1] not in WHITESPACE:
+                    yield flush()
 
-        # add string delimiters
-        elif c == STRING:
-            if len(buf) > 0:
-                yield flush()
-            yield c
+                # append the whitespace now that the buffer is empty
+                buf.append(c)
 
-        # consume whitespace by collecting it in the buffer
-        elif c in WHITESPACE:
-            # flush out other characters before starting a whitespace buffer
-            if len(buf) != 0 and buf[-1] not in WHITESPACE:
-                yield flush()
+            # various indentation structures
+            elif c in DATA or c in CONSUMERS:
+                if len(buf) > 0: yield flush()
+                yield Token(c, buf_line[0], column + 1)
 
-            # append the whitespace now that the buffer contains no other chars
-            buf.append(c)
+            # tokens that consume their next argument
+            elif c in CONSUMERS:
+                if len(buf) > 0: yield flush()
+                yield Token(c, buf_line[0], column + 1)
 
-        # open parenthesis
-        elif c == OPEN_PAREN:
-            if len(buf) > 0:
-                yield flush()
-            yield c
+            # a generic character, so collect it in the buffer
+            else:
+                # flush whitespace from the buffer before adding generic characters
+                if len(buf) > 0 and buf[-1] in WHITESPACE:
+                    yield flush()
 
-        # close parenthesis
-        elif c == CLOSE_PAREN:
-            if len(buf) > 0:
-                yield flush()
-            yield c
+                # append the char now that the buffer contains no whitespace
+                buf.append(c)
 
-        # quotes, unquotes, and quasiquotes
-        elif c in SUGAR:
-            if len(buf) > 0:
-                yield flush()
-            yield c
-
-        # just a normal character, so collect it in the buffer
-        else:
-            # flush whitespace from the buffer before adding normal characters
-            if len(buf) > 0 and buf[-1] in WHITESPACE:
-                yield flush()
-
-            # append the character now that the buffer contains no
-            # whitespace.
-            buf.append(c)
+            # if something got added to the buffer, mark where it started if we
+            # haven't already done so.
+            if len(buf) > 0 and buf_column[0] < 0:
+                buf_column[0] = column + 1
 
     # do a final buffer flush to yield any remaining contents
-    if len(buf) > 0:
-        yield flush()
+    if len(buf) > 0: yield flush()

@@ -1,7 +1,5 @@
-import collections
 import threading
 
-import errors
 import tokens
 
 def ensure_type(required_class, item, *rest):

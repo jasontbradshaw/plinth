@@ -11,6 +11,17 @@ import util
 class Object(object):
     '''The base class all custom language constructs inherit from.'''
 
+    # the subclasses that Object's #parse method will attempt to parse from a
+    # token in order of preference. order matters! see #parse for more details.
+    PARSEABLE_SUBCLASSES = (
+        Integer,
+        Float,
+        Boolean,
+        String,
+        Keyword,
+        Symbol,
+    )
+
     def __init__(self, value=None, can_modify_meta=True):
         self.value = value
 
@@ -31,8 +42,11 @@ class Object(object):
         self.meta[key] = value
 
     def __str__(self):
-        '''Default to returning our value's string.'''
+        '''Default to returning our value's unicode string.'''
         return unicode(self.value)
+
+    def __unicode__(self):
+        return str(self)
 
     def __repr__(self):
         v = self.value if hasattr(self, 'value') else None
@@ -51,41 +65,22 @@ class Object(object):
         '''
         Returns a new object based on the token value passed in. If the given
         token was invalid, None should be returned. Subclasses should override
-        this method with their own specific implementation.
+        this method with their own specific implementation that returns an
+        instance of their particular subclass.
 
         This particular instance takes the given token string and returns an
-        instance of the class that best represents that token in its most
-        natural form (int, str, Symbol, etc.).
+        instance of the Object subclass that best represents that token in its
+        most natural form (Integer, String, Symbol, etc.).
         '''
 
-        result = Integer.parse(token)
-        if result is not None:
-            return result
+        # the first instance of the subclasses that returns a non-None response
+        # will be used, so order matters!
+        for Subclass in Object.PARSEABLE_SUBCLASSES:
+            result = Subclass.parse(token)
+            if result is not None:
+                return result
 
-        result = Float.parse(token)
-        if result is not None:
-            return result
-
-        result = Boolean.parse(result)
-        if result is not None:
-            return result
-
-        result = String.parse(result)
-        if result is not None:
-            return result
-
-        result = Keyword.parse(result)
-        if result is not None:
-            return result
-
-        result = Symbol.parse(result)
-
-        # symbols are the base case for all tokens. if we can't parse this,
-        # there's nothing else to try!
-        if result is None:
-            raise ValueError('invalid token: ' + unicode(token))
-
-        return result
+        return None
 
 class Number(Object):
     '''A number in our language.'''
@@ -365,10 +360,11 @@ class Keyword(Object):
 
     @staticmethod
     def parse(token):
-        # keywords only differ from symbols in that they start differently
-        kw = token[1:]
-        if token[0] == tokens.KEYWORD and Keyword.REGEX.match(kw):
-            return Keyword(kw)
+        # keyword tokens differ from symbol tokens only in that they start
+        # differently.
+        word = token[1:]
+        if token[0] == tokens.KEYWORD and Keyword.REGEX.match(word):
+            return Keyword(word)
         return None
 
 class Map(Object):
@@ -470,11 +466,8 @@ class Environment(dict):
     package execution state.
     '''
 
-    def __init__(self, parent):
-        '''
-        Create an environment with the given parent and any number of predefined
-        variables.
-        '''
+    def __init__(self, parent=None):
+        '''Create an environment with an optional parent.'''
 
         # None means no parent, otherwise must be an environment
         assert parent is None or isinstance(parent, Environment)

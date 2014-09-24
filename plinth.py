@@ -1,20 +1,12 @@
-#!/usr/bin/env python
+from __future__ import unicode_literals
 
-import os
-import sys
-import traceback
-
-import errors
-import interpreter
-import lang
-import primitives
 import tokens
-import util
+import lang
 
 def parse(token_source):
     '''
     Given a token source, parses the token sequence into an abstract syntax
-    tree built from the base elements of the language.
+    tree built from the base elements of the language, then returns the tree.
     '''
 
     # where the abstract syntax tree is held
@@ -57,7 +49,7 @@ def parse(token_source):
     # quickly post-process them when done parsing.
     sugar_locations = []
 
-    # iterate over every character in the source string
+    # iterate over token in our source
     for token in token_source:
 
         # deal with strings first to avoid triggering other language constructs.
@@ -521,56 +513,5 @@ class PlinthInterpreter(interpreter.Interpreter):
 
 if __name__ == '__main__':
     # the default global environment
-    env = lang.Environment(None)
-
-    def bind_prim(token, function):
-        '''Binds a primitive function to a token in the global environment.'''
-        s = lang.Symbol(token)
-        f = lang.PrimitiveFunction(function, token)
-        env[s] = f
-
-    # bind functions that need special treatment during evaluation
-    env[lang.Symbol(tokens.QUOTE_LONG)] = primitives.quote
-    env[lang.Symbol(tokens.QUASIQUOTE_LONG)] = primitives.quasiquote
-    env[lang.Symbol(tokens.LAMBDA)] = primitives.lambda_
-    env[lang.Symbol(tokens.MACRO)] = primitives.macro
-    env[lang.Symbol(tokens.MACRO_EXPAND)] = primitives.expand
-    env[lang.Symbol(tokens.DEFINE)] = primitives.define
-    env[lang.Symbol(tokens.COND)] = primitives.cond
-    env[lang.Symbol(tokens.AND)] = primitives.and_
-    env[lang.Symbol(tokens.OR)] = primitives.or_
-    env[lang.Symbol(tokens.EVAL)] = primitives.eval_
-    env[lang.Symbol(tokens.LOAD)] = primitives.load
-
-    # repl
-    bind_prim(tokens.READ, primitives.read)
-    bind_prim(tokens.PARSE, primitives.parse_)
-
-    # logical
-    bind_prim(tokens.NOT, primitives.not_)
-
-    # math
-    bind_prim(tokens.ADD, primitives.add)
-    bind_prim(tokens.SUBTRACT, primitives.sub)
-    bind_prim(tokens.MULTIPLY, primitives.mul)
-    bind_prim(tokens.DIVIDE, primitives.div)
-    bind_prim(tokens.MODULUS, primitives.mod)
-    bind_prim(tokens.POWER, primitives.power)
-
-    # comparison
-    bind_prim(tokens.IS, primitives.is_)
-    bind_prim(tokens.EQUAL, primitives.equal)
-    bind_prim(tokens.GREATER_THAN, primitives.gt)
-
-    # cons
-    bind_prim(tokens.CONS, primitives.cons)
-    bind_prim(tokens.CAR, primitives.car)
-    bind_prim(tokens.CDR, primitives.cdr)
-    bind_prim(tokens.LISTP, lang.Cons.is_list)
-
-    # meta
-    bind_prim(tokens.GENERATE_SYMBOL, primitives.gensym)
-    bind_prim(tokens.TYPE, primitives.type_)
-
-    # run an interpreter until the user quits
+    env = lang.Environment()
     PlinthInterpreter(env).repl()
